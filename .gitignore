@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Local editor files
+.idea/
+.vscode/
+
+# Build outputs
+**/build/
+**/.pio/
+**/Debug/
+**/Release/
+*.o
+*.a
+*.elf
+*.bin
+*.hex
+*.map
+
+# Local environment
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
