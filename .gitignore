@@ -23,3 +23,8 @@
 !.env.example
 .venv/
 __pycache__/
+
+# Robot viewer tessellated geometry (not a firmware image)
+!tools/encoder_dashboard/static/models/robot.bin
+tools/cad/node_modules/
+!tools/encoder_dashboard/static/models/robot-screen.bin

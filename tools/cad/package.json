@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "description": "Offline STEP tessellation for the robot viewer",
+  "scripts": {"convert": "node convert-all.cjs"},
+  "dependencies": {"occt-import-js": "0.0.23"}
+}

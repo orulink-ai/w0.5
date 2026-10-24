@@ -1,0 +1,5 @@
+# Preserve original CAD exports and their SHA-256; do not line-normalize or merge.
+hardware/models/*.step binary
+
+# Keep upstream Three.js formatting intact.
+tools/encoder_dashboard/static/vendor/** -whitespace

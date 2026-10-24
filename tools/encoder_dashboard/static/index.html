@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>角度调试台 · AS5600 · W0.5</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/robot-viewer.css">
+  <script type="importmap">{"imports":{"three":"/vendor/three/three.module.min.js"}}</script>
+  <script type="module" src="/robot-viewer.js"></script>
   <script src="/api.js" defer></script>
   <script src="/components/legacy-controls.js" defer></script>
   <script src="/components/lease-keeper.js" defer></script>
@@ -21,6 +24,7 @@
       <div><div class="eyebrow">ANGLE WORKBENCH / 01</div><h1>AS5600 角度调试台</h1><p>实时查看编码器反馈，校准并调试闭环运动。</p></div>
       <div id="signal-badge" class="badge" role="status"><span class="dot"></span><span id="signal-label">等待连接</span></div>
     </section>
+    <section id="robot-viewer" class="card" aria-label="机器人三维模型"><p role="status">正在加载机器人 3D 模型…</p></section>
     <div class="workspace">
       <aside class="connection card">
         <div class="section-label"><span class="tiny-icon">↔</span> 串口连接</div>

@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import { createModelLoader } from '../encoder_dashboard/static/model-loader.mjs';
+
+const pending = new Map();
+const loader = createModelLoader((url) => new Promise((resolve, reject) => pending.set(url, {resolve, reject})));
+const response = (body) => ({ok: true, json: async () => body, arrayBuffer: async () => body});
+const camera = loader({manifest: 'camera.json', binary: 'camera.bin'});
+const screen = loader({manifest: 'screen.json', binary: 'screen.bin'});
+pending.get('screen.json').resolve(response({source:'screen.step'}));
+pending.get('screen.bin').resolve(response(new ArrayBuffer(4)));
+assert.equal((await screen).manifest.source, 'screen.step');
+pending.get('camera.json').resolve(response({source:'camera.step'}));
+pending.get('camera.bin').resolve(response(new ArrayBuffer(4)));
+assert.equal(await camera, null, 'a late previous model must not replace the selected model');
+const failure = loader({manifest:'bad.json',binary:'bad.bin'});
+pending.get('bad.json').resolve({ok:false});
+pending.get('bad.bin').resolve(response(new ArrayBuffer(4)));
+await assert.rejects(failure, /模型资源/);
+const recovered = loader({manifest:'ok.json',binary:'ok.bin'});
+pending.get('ok.json').resolve(response({source:'recovered.step'}));
+pending.get('ok.bin').resolve(response(new ArrayBuffer(4)));
+assert.equal((await recovered).manifest.source, 'recovered.step');
+console.log('Robot model switching tests passed');

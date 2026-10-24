@@ -215,7 +215,27 @@ def make_server(reader, store, port=8840):
                          "/components/legacy-controls.js": ("components/legacy-controls.js", "application/javascript; charset=utf-8"),
                          "/components/closed-loop.js": ("components/closed-loop.js", "application/javascript; charset=utf-8"),
                          "/components/lease-keeper.js": ("components/lease-keeper.js", "application/javascript; charset=utf-8"),
-                         "/style.css": ("style.css", "text/css; charset=utf-8")}
+                         "/style.css": ("style.css", "text/css; charset=utf-8"),
+                         "/robot-viewer.js": ("robot-viewer.js", "application/javascript; charset=utf-8"),
+                         "/robot-finishes.mjs": ("robot-finishes.mjs", "application/javascript; charset=utf-8"),
+                         "/robot-rig.js": ("robot-rig.js", "application/javascript; charset=utf-8"),
+                         "/robot-motion.mjs": ("robot-motion.mjs", "application/javascript; charset=utf-8"),
+                         "/robot-motion-clock.mjs": ("robot-motion-clock.mjs", "application/javascript; charset=utf-8"),
+                         "/robot-replica.js": ("robot-replica.js", "application/javascript; charset=utf-8"),
+                         "/robot-warm-desktop.js": ("robot-warm-desktop.js", "application/javascript; charset=utf-8"),
+                         "/robot-scene-config.mjs": ("robot-scene-config.mjs", "application/javascript; charset=utf-8"),
+                         "/robot-desktop.js": ("robot-desktop.js", "application/javascript; charset=utf-8"),
+                         "/robot-eyes.js": ("robot-eyes.js", "application/javascript; charset=utf-8"),
+                         "/vendor/three/RoomEnvironment.js": ("vendor/three/RoomEnvironment.js", "application/javascript; charset=utf-8"),
+                         "/model-loader.mjs": ("model-loader.mjs", "application/javascript; charset=utf-8"),
+                         "/models/robot-screen.json": ("models/robot-screen.json", "application/json; charset=utf-8"),
+                         "/models/robot-screen.bin": ("models/robot-screen.bin", "application/octet-stream"),
+                         "/robot-viewer.css": ("robot-viewer.css", "text/css; charset=utf-8"),
+                         "/vendor/three/three.module.min.js": ("vendor/three/three.module.min.js", "application/javascript; charset=utf-8"),
+                         "/vendor/three/three.core.min.js": ("vendor/three/three.core.min.js", "application/javascript; charset=utf-8"),
+                         "/vendor/three/OrbitControls.js": ("vendor/three/OrbitControls.js", "application/javascript; charset=utf-8"),
+                         "/models/robot.json": ("models/robot.json", "application/json; charset=utf-8"),
+                         "/models/robot.bin": ("models/robot.bin", "application/octet-stream")}
                 if path not in files:
                     self.respond(404, {"error": "Not found"})
                     return

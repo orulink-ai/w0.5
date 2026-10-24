@@ -1,0 +1,130 @@
+{
+  "frameRate": 24,
+  "frameCountPerModel": 433,
+  "models": {
+    "camera": {
+      "vertices": 22437,
+      "worldCoordinatesChecked": 9715221,
+      "finiteWorldCoordinates": true,
+      "maxBaseVertexDriftMM": 0,
+      "maxEyeAttachmentMatrixDrift": 2.842170943040401e-14,
+      "maxLoopVertexDriftMM": 0,
+      "pose": {
+        "yaw": {
+          "minDegrees": -35,
+          "maxDegrees": 48,
+          "maxVelocityDegreesPerSecond": 85.42909639111315,
+          "maxAccelerationDegreesPerSecondSquared": 227.8315564634613,
+          "maxDiscreteJerkDegreesPerSecondCubed": 1660.363189299569,
+          "boundaryAccelerationJumpFiniteDifferenceDegreesPerSecondSquared": 0.021600499167107042
+        },
+        "pitch": {
+          "minDegrees": -8,
+          "maxDegrees": 18,
+          "maxVelocityDegreesPerSecond": 87.94112998325352,
+          "maxAccelerationDegreesPerSecondSquared": 693.6503245628767,
+          "maxDiscreteJerkDegreesPerSecondCubed": 9953.083868616663,
+          "boundaryAccelerationJumpFiniteDifferenceDegreesPerSecondSquared": 0.1968035662320911
+        }
+      },
+      "blink": {
+        "closedFrames": 15,
+        "minimumOpenness": 0,
+        "peakNodTime": 6.9,
+        "opennessAtPeak": 0.06947997858034456
+      }
+    },
+    "screen": {
+      "vertices": 18465,
+      "worldCoordinatesChecked": 7995345,
+      "finiteWorldCoordinates": true,
+      "maxBaseVertexDriftMM": 0,
+      "maxEyeAttachmentMatrixDrift": 2.842170943040401e-14,
+      "maxLoopVertexDriftMM": 0,
+      "pose": {
+        "yaw": {
+          "minDegrees": -48,
+          "maxDegrees": 35,
+          "maxVelocityDegreesPerSecond": 85.247004444447,
+          "maxAccelerationDegreesPerSecondSquared": 209.3952000000263,
+          "maxDiscreteJerkDegreesPerSecondCubed": 1275.1462399998818,
+          "boundaryAccelerationJumpFiniteDifferenceDegreesPerSecondSquared": 0.0177635683940025
+        },
+        "pitch": {
+          "minDegrees": -8,
+          "maxDegrees": 20,
+          "maxVelocityDegreesPerSecond": 97.26319390475045,
+          "maxAccelerationDegreesPerSecondSquared": 766.5682827437186,
+          "maxDiscreteJerkDegreesPerSecondCubed": 10572.764861179341,
+          "boundaryAccelerationJumpFiniteDifferenceDegreesPerSecondSquared": 0.21895374402447484
+        }
+      },
+      "blink": {
+        "closedFrames": 14,
+        "minimumOpenness": 0,
+        "peakNodTime": 7.8,
+        "opennessAtPeak": 0.06947997858035534
+      }
+    }
+  },
+  "clocks": [
+    {
+      "refreshHz": 60,
+      "updatesIn18s": 432,
+      "meanFPS": 24,
+      "elapsedSeconds": 17.99999999999991,
+      "pauseFrozen": true,
+      "exactSeek": true,
+      "hiddenFrozen": true
+    },
+    {
+      "refreshHz": 90,
+      "updatesIn18s": 432,
+      "meanFPS": 24,
+      "elapsedSeconds": 17.999999999999794,
+      "pauseFrozen": true,
+      "exactSeek": true,
+      "hiddenFrozen": true
+    },
+    {
+      "refreshHz": 120,
+      "updatesIn18s": 432,
+      "meanFPS": 24,
+      "elapsedSeconds": 18.000000000000664,
+      "pauseFrozen": true,
+      "exactSeek": true,
+      "hiddenFrozen": true
+    },
+    {
+      "refreshHz": 144,
+      "updatesIn18s": 432,
+      "meanFPS": 24,
+      "elapsedSeconds": 17.999999999999773,
+      "pauseFrozen": true,
+      "exactSeek": true,
+      "hiddenFrozen": true
+    }
+  ],
+  "review": {
+    "version": 2,
+    "reason": "Old engineering score did not evaluate whether viewers could read the intended gesture; that score is withdrawn.",
+    "visualReview": "433 rendered frames reviewed in five contact sheets, plus held looks and greeting key poses.",
+    "artisticScore": null,
+    "changes": [
+      "outward yaw 35 degrees with explicit holds",
+      "inward yaw 48 degrees followed by an 18/20 degree nod, reply delayed 0.9s",
+      "separate 12 and 18 degree viewer nods with complete return and pause",
+      "eye gaze anticipates turn; shared deterministic blink timeline"
+    ],
+    "limits": "Visual preview only. Mechanical limits and collisions are not validated.",
+    "sameFrameHashStable": true,
+    "loopHashIdentical": true,
+    "playbackNote": "Test browser rAF was throttled to about 1Hz even when document visibility was visible. Actual smooth 24fps playback is not claimed. MP4 renders all sampled frames at fixed 24fps.",
+    "browserControls": {
+      "end": "432",
+      "previous": "431",
+      "start": "0",
+      "viewAfterResize": "interaction"
+    }
+  }
+}
