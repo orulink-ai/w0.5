@@ -20,6 +20,10 @@ The preview now draws a lip outline and corner markers, with an in-video status 
 
 ### Voice preparation and optional prelistening (local-cascade)
 
+In both modes, 0.75 seconds of confirmed face absence stops new turns. Unsubmitted capture is discarded; an already submitted turn finishes recognition, generation and speaker drain before parking. Conversations stay enabled and stable reentry rearms automatically, including single mode when departure occurred during its reply. Completion retains a 1.5-second cooldown followed by fresh face confirmation. With prelistening enabled, the next standby process resumes the bounded local buffer without ASR before face confirmation. Playback and process handoff still pause capture. Video stale for one second uses the same finish policy, so a later video delay cannot escalate departure into forced cancellation. Manual stop, actual audio transport loss, camera worker exit and configuration changes still cancel immediately. This finish-on-departure policy applies only to local-cascade; the native path below retains cancellation.
+
+Device stdout emits metadata-only `voice-lifecycle` JSON for finish requests, cancellation, speaker drain and session exit, with reason, phase, turn ID and timestamp. Use launcher Logs to inspect it; transcripts, reply text, PCM and credentials are excluded.
+
 Enabling face conversations prepares one standby Node/Python voice process and the shared audio connection while video is fresh. Face confirmation adopts it; continuous turns reuse it, and a completed encounter prepares a new standby process. Single mode still needs departure/reentry. By default the microphone stays off until face confirmation.
 
 Optional prelistening retains at most 1.5 seconds in RAM, with no ASR before face confirmation. Only fresh frames since the current face first appeared can be replayed. Stop, camera loss, or configuration changes dispose of standby capture and its buffer. The console explicitly shows buffered input as not sent to recognition. Continuous UART audio can reduce idle video to approximately 14 FPS. SenseVoice remains utterance-based.

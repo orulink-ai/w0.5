@@ -24,6 +24,8 @@ class VoicePanel:
         self.events = queue.Queue()
         self.worker = None
         self.stop_event = threading.Event()
+        self.finish_event = threading.Event()
+        self.departed = False
         self.pending = None
         self.in_turn = False
         self.requires_face = False
@@ -112,6 +114,7 @@ class VoicePanel:
         if self.busy or slot is not None:
             return
         events, stop = queue.Queue(maxsize=256), threading.Event()
+        finish = threading.Event()
         activation = (threading.Event(), {})
         endpoint = self.endpoint.get().strip()
         mouth_provider = self.mouth_provider
@@ -123,7 +126,8 @@ class VoicePanel:
             try:
                 VoiceSession(port, endpoint, lambda kind, text: events.put((kind, text)), stop,
                              broker=broker, once=once, mouth_provider=mouth_provider,
-                             activation=activation, prelisten=prelisten, input_gain_db=gain).run()
+                             activation=activation, prelisten=prelisten, input_gain_db=gain,
+                             finish_event=finish).run()
             except Exception as exc:
                 events.put(('error', str(exc)))
             finally:
@@ -131,7 +135,7 @@ class VoicePanel:
 
         thread = threading.Thread(target=work, daemon=True)
         self.prepared = dict(port=port, broker=broker, thread=thread, stop=stop,
-                             events=events, activation=activation)
+                             events=events, activation=activation, finish=finish)
         self.prewarm_ready = False
         self.status.set('正在提前准备语音 · 等待人脸')
         thread.start()
@@ -181,11 +185,14 @@ class VoicePanel:
         self.reply_complete = False
         self.phase = 'starting'
         self.stop_event = threading.Event()
+        self.finish_event = threading.Event()
+        self.departed = False
         slot = getattr(self, 'prepared', None)
         if (prompt is None and slot is not None and slot['port'] == port and slot['broker'] == broker
                 and slot['thread'].is_alive() and not slot['stop'].is_set()):
             self.pending = None
             self.events, self.worker, self.stop_event = slot['events'], slot['thread'], slot['stop']
+            self.finish_event = slot['finish']
             self.prepared = None
             slot['activation'][1]['since'] = self.face_since if self.face_since is not None else time.time() * 1000
             slot['activation'][0].set()
@@ -199,6 +206,22 @@ class VoicePanel:
         self.endpoint_entry.configure(state='disabled')
         return True
 
+    def log_transition(self, event, reason):
+        # Only lifecycle metadata: no microphone PCM, transcripts or credentials.
+        print(json.dumps({'type': 'voice-lifecycle', 'event': event, 'reason': reason,
+                          'phase': self.phase, 'turnId': self.turn_id,
+                          'at': time.time() * 1000}, ensure_ascii=False), flush=True)
+
+    def finish_when_absent(self, reason='人脸已离开'):
+        """Stop accepting turns; the child decides whether a reply needs draining."""
+        if not self.in_turn or self.departed:
+            return
+        self.departed = True
+        self.finish_event.set()
+        self.log_transition('finish-requested', reason)
+        self.status.set(reason + ' · 已提交的本轮回复播完后待命 · 入镜自动继续')
+        self.updated_at = time.time() * 1000
+
     def cancel(self, reason='收到停止指令'):
         slot = getattr(self, 'prepared', None)
         if slot is not None:
@@ -210,6 +233,7 @@ class VoicePanel:
             self.pending = None
             self.events.put(('done', 'cancelled'))
         if self.in_turn:
+            self.log_transition('cancel-requested', reason)
             self.cancel_reason = reason
             self.status.set('正在取消语音 · 摄像头继续预览…')
             self.phase = 'cancelling'
@@ -247,11 +271,13 @@ class VoicePanel:
             port, endpoint, broker, prompt, once = self.pending
             self.pending = None
             events, stop = self.events, self.stop_event
+            finish = self.finish_event
 
             def work():
                 try:
                     extras = {'mouth_provider': self.mouth_provider} if self.mouth_provider is not None else {}
                     extras['input_gain_db'] = getattr(self, 'input_gain_db', 0)
+                    extras['finish_event'] = finish
                     VoiceSession(port, endpoint, lambda kind, text: events.put((kind, text)), stop,
                                  broker=broker, prompt=prompt, once=once, **extras).run()
                 except Exception as exc:
@@ -292,6 +318,7 @@ class VoicePanel:
             elif kind == 'turn-done':
                 self.reply_complete = True
                 self.phase = 'done'
+                self.log_transition('reply-drained', '收到喇叭播放完成确认')
             elif kind == 'error':
                 self.failed = True
                 # Process cleanup may report a generic disconnect after the
@@ -322,6 +349,8 @@ class VoicePanel:
                 self.finished = True
             self.updated_at = time.time() * 1000
         if self.finished and (self.worker is None or not self.worker.is_alive()):
+            self.log_transition('session-exited', 'error' if self.failed else
+                                'cancelled' if self.stop_event.is_set() else 'finished')
             self.in_turn = False
             self.finished = False
             self.worker = None

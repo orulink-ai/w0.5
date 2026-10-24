@@ -607,10 +607,33 @@ class App:
             return
         fresh = self.last_frame_at and now - self.last_frame_at < 1
         absent = self.face_gate.absent_since
-        if not fresh or (self.voice.mode == 'continuous' and not self.face_ids
-                         and absent is not None and now - absent >= .75):
-            self.voice.cancel(reason='人脸已离开或摄像头画面中断')
-            self.voice.status.set('人脸已离开或画面中断 · 正在停止对话')
+        if not fresh:
+            if os.environ.get('VI_VOICE_PROVIDER') == 'local-cascade':
+                # Missing video is not an audio disconnect. Let the child stop
+                # capture or drain its submitted reply according to real state.
+                self.voice.finish_when_absent(reason='视频画面暂未更新')
+            else:
+                self.voice.cancel(reason='人脸已离开或摄像头画面中断')
+                self.voice.status.set('人脸已离开或画面中断 · 正在停止对话')
+        elif not self.face_ids and absent is not None and now - absent >= .75:
+            if os.environ.get('VI_VOICE_PROVIDER') == 'local-cascade':
+                self.voice.finish_when_absent()
+            elif self.voice.mode == 'continuous':
+                self.voice.cancel(reason='人脸已离开')
+
+    def on_voice_completed(self, camera_alive):
+        self.voice_ready_at = time.monotonic() + 1.5
+        if self.voice.mode == 'continuous' or self.voice_mode_changed or self.voice.departed:
+            self.face_gate.suspend()
+            self.face_gate.armed = True
+        self.voice_mode_changed = False
+        if self.voice.failed:
+            self.voice.enabled.set(False)
+        elif self.voice.enabled.get() and self.voice.phase == 'done':
+            self.voice.status.set('本轮完成 · 等待人脸离开后再次出现'
+                                  if self.voice.mode == 'single' and not self.voice.departed
+                                  else '会话待命 · 人脸稳定后自动开始')
+        self.status.set('摄像头持续运行 · 本轮语音已结束' if camera_alive else '等待开发板摄像头连接')
 
     def publish_robot(self, now):
         if now < self.next_robot_publish:
@@ -693,17 +716,7 @@ class App:
                            get_audio_broker(prewarm_source.removeprefix('serial://').upper())
                            if prewarm_fresh and prewarm_source.startswith('serial://') else None)
         if completed and not self.closing:
-            self.voice_ready_at = time.monotonic() + 1.5
-            if self.voice.mode == 'continuous' or self.voice_mode_changed:
-                self.face_gate.suspend()
-                self.face_gate.armed = True
-            self.voice_mode_changed = False
-            if self.voice.failed:
-                self.voice.enabled.set(False)
-            elif self.voice.enabled.get() and self.voice.phase == 'done':
-                self.voice.status.set('本轮完成 · 等待人脸离开后再次出现' if self.voice.mode == 'single'
-                                      else '会话结束 · 等待人脸稳定后重新开始')
-            self.status.set('摄像头持续运行 · 本轮语音已结束' if camera_alive else '等待开发板摄像头连接')
+            self.on_voice_completed(camera_alive)
         if self.manual_voice_pending and camera_alive and self.last_frame_at:
             port = self.camera.get().removeprefix('serial://').upper()
             if get_audio_broker(port):

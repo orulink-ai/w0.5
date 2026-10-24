@@ -1,7 +1,10 @@
 """Concurrent camera/audio lifecycle; no device or model service is opened."""
+import io
+import json
 import queue
 import threading
 import unittest
+from contextlib import redirect_stdout
 from unittest.mock import Mock, patch
 
 from voice_panel import VoicePanel
@@ -36,6 +39,66 @@ def panel():
 
 
 class VoicePanelTests(unittest.TestCase):
+    def test_lifecycle_diagnostics_distinguish_graceful_departure_from_manual_stop(self):
+        view = panel()
+        view.request('COM15', ('tcp://127.0.0.1:12345', 'test-nonce'))
+        view.user_text = 'private user speech'
+        view.answer_text = 'private answer'
+        view.phase = 'speaking'
+        output = io.StringIO()
+        with redirect_stdout(output):
+            view.finish_when_absent()
+            view.finish_when_absent(reason='视频画面暂未更新')
+            self.assertFalse(view.stop_event.is_set())
+            view.cancel(reason='收到停止指令')
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual([item['event'] for item in records], ['finish-requested', 'cancel-requested'])
+        self.assertTrue(all(item['phase'] == 'speaking' for item in records))
+        self.assertTrue(all(item['turnId'] == view.turn_id for item in records))
+        self.assertNotIn('private', output.getvalue())
+
+    def test_actual_camera_worker_loss_still_cancels_voice(self):
+        view = panel()
+        view.request('COM15', ('tcp://127.0.0.1:12345', 'test-nonce'))
+        view.pending = None
+        view.poll(camera_alive=False)
+        self.assertTrue(view.stop_event.is_set())
+        self.assertTrue(view.failed)
+        self.assertIn('连接中断', view.error)
+
+    def test_departure_does_not_abort_reply_and_standby_can_be_prepared_again(self):
+        view = panel()
+        broker = ('tcp://127.0.0.1:12345', 'test-nonce')
+        release = threading.Event()
+        with patch.dict('os.environ', VI_VOICE_PROVIDER='local-cascade'), patch('voice_panel.VoiceSession') as session:
+            session.return_value.run.side_effect = lambda: release.wait(2)
+            view.request('COM15', broker)
+            view.poll(True)
+            thread = view.worker
+            view.finish_when_absent()
+            self.assertTrue(view.finish_event.is_set())
+            self.assertTrue(view.departed)
+            self.assertFalse(view.stop_event.is_set())
+            self.assertIs(session.call_args.kwargs['finish_event'], view.finish_event)
+            self.assertTrue(view.busy)
+            release.set()
+            thread.join(1)
+            self.assertTrue(view.poll(True))
+            self.assertFalse(view.failed)
+            view.enabled.set.assert_called_once_with(True)
+            view.prepare('COM15', broker)
+            standby = view.prepared
+            standby['thread'].join(1)
+            self.assertFalse(standby['finish'].is_set())
+
+    def test_manual_stop_overrides_departure_finish(self):
+        view = panel()
+        view.request('COM15', ('tcp://127.0.0.1:12345', 'test-nonce'))
+        view.finish_when_absent()
+        view.cancel()
+        self.assertTrue(view.stop_event.is_set())
+        self.assertEqual(view.phase, 'cancelling')
+
     def test_voice_starts_while_camera_keeps_running(self):
         view = panel()
         release = threading.Event()

@@ -21,6 +21,8 @@ def app_state(source='serial://COM15', running=True):
     state.voice.enabled.get.return_value = True
     state.voice.face_trigger.get.return_value = True
     state.voice.mode = 'continuous'
+    state.voice.departed = False
+    state.voice_mode_changed = False
     state.voice.stop_event = threading.Event()
     state.stop_event = threading.Event()
     state.face_gate = FaceGate()
@@ -49,6 +51,9 @@ class AppVoiceTests(unittest.TestCase):
         state.save_view_settings.assert_called_once()
 
     def setUp(self):
+        provider = patch.dict('os.environ', VI_VOICE_PROVIDER='local-cascade')
+        provider.start()
+        self.addCleanup(provider.stop)
         broker = patch('app.get_audio_broker', return_value=('tcp://127.0.0.1:12345', 'test-nonce'))
         broker.start()
         self.addCleanup(broker.stop)
@@ -94,18 +99,32 @@ class AppVoiceTests(unittest.TestCase):
             'COM15', ('tcp://127.0.0.1:12345', 'test-nonce'), prompt='请说你好')
         self.assertFalse(state.stop_event.is_set())
 
-    def test_stale_camera_cancels_all_stages_in_continuous_mode(self):
-        for phase in ('starting', 'listening', 'speaking', 'thinking'):
-            with self.subTest(phase=phase):
-                state = app_state()
-                state.voice.busy = True
-                state.voice.requires_face = True
-                state.voice.phase = phase
-                state.last_frame_at -= 2
-                state.enforce_face_presence(time.monotonic())
-                state.voice.cancel.assert_called_once()
+    def test_stale_video_parks_cascade_instead_of_aborting_a_submitted_reply(self):
+        for mode in ('single', 'continuous'):
+            for phase in ('starting', 'listening', 'recorded', 'speaking', 'thinking'):
+                with self.subTest(mode=mode, phase=phase):
+                    state = app_state()
+                    state.voice.mode = mode
+                    state.voice.busy = state.voice.requires_face = True
+                    state.voice.phase = phase
+                    # No face for a while, followed by a video delay. The
+                    # second condition must not escalate graceful finish to stop.
+                    state.voice.departed = True
+                    state.face_ids = []
+                    state.last_frame_at -= 2
+                    state.enforce_face_presence(time.monotonic())
+                    state.voice.finish_when_absent.assert_called_once_with(reason='视频画面暂未更新')
+                    state.voice.cancel.assert_not_called()
 
-    def test_face_departure_stops_every_stage_only_in_continuous_mode(self):
+    def test_stale_video_keeps_native_pipeline_cancellation(self):
+        state = app_state()
+        state.voice.busy = state.voice.requires_face = True
+        state.last_frame_at -= 2
+        with patch.dict('os.environ', VI_VOICE_PROVIDER='local-s2s'):
+            state.enforce_face_presence(time.monotonic())
+        state.voice.cancel.assert_called_once()
+
+    def test_face_departure_requests_finish_instead_of_cancelling_in_both_modes(self):
         for mode in ('single', 'continuous'):
             for phase in ('starting', 'listening', 'speaking', 'thinking'):
                 with self.subTest(mode=mode, phase=phase):
@@ -116,7 +135,46 @@ class AppVoiceTests(unittest.TestCase):
                     state.face_ids = []
                     state.face_gate.absent_since = time.monotonic() - 1
                     state.enforce_face_presence(time.monotonic())
-                    self.assertEqual(state.voice.cancel.called, mode == 'continuous')
+                    state.voice.finish_when_absent.assert_called_once()
+                    state.voice.cancel.assert_not_called()
+                    state.voice.enabled.set.assert_not_called()
+
+    def test_departed_encounter_rearms_both_modes_without_disabling_voice(self):
+        for mode in ('single', 'continuous'):
+            with self.subTest(mode=mode):
+                state = app_state()
+                state.voice.mode = mode
+                state.voice.departed = True
+                state.voice.failed = False
+                state.voice.phase = 'done'
+                state.face_gate.block_until_departure()
+                state.on_voice_completed(True)
+                self.assertTrue(state.face_gate.armed)
+                self.assertIsNone(state.face_gate.present_since)
+                state.voice.enabled.set.assert_not_called()
+                # A returned face still needs a fresh stable interval.
+                self.assertFalse(state.face_gate.update(True, 10))
+                self.assertTrue(state.face_gate.update(True, 11))
+
+    def test_single_completed_turn_stays_blocked_when_person_has_not_left(self):
+        state = app_state()
+        state.voice.mode = 'single'
+        state.voice.failed = False
+        state.face_gate.block_until_departure()
+        state.on_voice_completed(True)
+        self.assertFalse(state.face_gate.armed)
+
+    def test_native_pipeline_keeps_its_original_departure_policy(self):
+        for mode in ('single', 'continuous'):
+            state = app_state()
+            state.voice.mode = mode
+            state.voice.busy = state.voice.requires_face = True
+            state.face_ids = []
+            state.face_gate.absent_since = time.monotonic() - 1
+            with patch.dict('os.environ', VI_VOICE_PROVIDER='local-s2s'):
+                state.enforce_face_presence(time.monotonic())
+            state.voice.finish_when_absent.assert_not_called()
+            self.assertEqual(state.voice.cancel.called, mode == 'continuous')
 
     def test_speaker_test_is_not_cancelled_when_no_face_is_present(self):
         state = app_state()

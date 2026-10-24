@@ -9,6 +9,36 @@ from voice_session import VoiceSession
 
 
 class VoiceSessionTests(unittest.TestCase):
+    def test_departure_is_forwarded_once_and_requires_a_clean_park_acknowledgement(self):
+        for parked, code in ((True, 0), (False, 0), (True, 1)):
+            with self.subTest(parked=parked, code=code):
+                finish = threading.Event()
+                finish.set()
+                activation = (threading.Event(), {'since': 1000})
+                activation[0].set()
+                class Input(io.StringIO):
+                    contents = ''
+                    def write(self, text):
+                        self.contents += text
+                        return super().write(text)
+                class Process:
+                    stdout = io.StringIO('{"type":"state","text":"正在聆听"}\n' +
+                                         ('{"type":"parked","text":"等待人脸"}\n' if parked else ''))
+                    stdin = Input()
+                    def poll(self): return code
+                    def wait(self, timeout=None): return code
+                process = Process()
+                with patch.dict('voice_session.os.environ', VI_VOICE_PROVIDER='local-cascade'), \
+                        patch('voice_session.subprocess.Popen', return_value=process):
+                    session = VoiceSession('COM15', 'http://127.0.0.1:8790', lambda *_: None,
+                                           threading.Event(), finish_event=finish, activation=activation)
+                    if parked and code == 0:
+                        session.run()
+                    else:
+                        with self.assertRaises(RuntimeError):
+                            session.run()
+                self.assertEqual(process.stdin.contents, 'finish-turn\n')
+
     def test_visual_stdin_closure_does_not_hide_the_original_model_error(self):
         class Input(io.StringIO):
             def write(self, text):

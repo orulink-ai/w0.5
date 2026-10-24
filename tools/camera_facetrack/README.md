@@ -6,7 +6,11 @@
 
 使用相邻 vi-agent 的 `packages/vi-agent/scripts/setup-local-cascade.ps1` 安装 SenseVoiceSmall INT8、Ollama Qwen3 4B Q4_K_M 和中文 VITS，然后运行本目录 `setup.ps1` 准备摄像头。复制 `robot-console.cascade.example.json` 到 `runtime/robot-console/config.json` 后执行 `robot-console.ps1 -Action Start`。完整部署与验证说明在 vi-agent 的 `packages/vi-agent/docs/local-cascade-deployment.zh-CN.md`。
 
-`pipeline=local-cascade` 必须启用 `features.workbench=true`；启动模型、工作台 API、设备和网页，所有服务必需。网页统一显示中文识别、助手回复、Pi 任务、长期记忆和延迟；不显示浏览器云语音连接按钮。Pi 用本机 Ollama，记忆落盘到 vi-agent `.local-cascade/workbench`。保留人脸单轮触发和在场连续两种模式、离场取消、摄像头持续预览、音量固定 80。辅助关闭时音频静音 450ms 判停，CPU 人脸推理限制为 1 线程，避免与 ASR/TTS 争抢。SenseVoice 采用滚动分段离线识别，每段 TTS 仍为离线推理，不能保证全链路亚秒。
+`pipeline=local-cascade` 必须启用 `features.workbench=true`；启动模型、工作台 API、设备和网页，所有服务必需。网页统一显示中文识别、助手回复、Pi 任务、长期记忆和延迟；不显示浏览器云语音连接按钮。Pi 用本机 Ollama，记忆落盘到 vi-agent `.local-cascade/workbench`。保留人脸单轮触发和在场连续两种模式、摄像头持续预览、音量固定 80。辅助关闭时音频静音 450ms 判停，CPU 人脸推理限制为 1 线程，避免与 ASR/TTS 争抢。SenseVoice 采用滚动分段离线识别，每段 TTS 仍为离线推理，不能保证全链路亚秒。
+
+两种模式确认人脸离开 0.75 秒后停止新轮次；若尚在聆听则丢弃未提交的录音，已经判停提交的本轮会完成识别、生成及喇叭排空后再待命。人脸对话开关保持开启，重新入镜稳定后自动触发；单轮仍不会在同一人一直在场时反复回复。完成退出后保留 1.5 秒冷却及重新确认稳定人脸。开启提前收音时，无人脸待命会恢复 1.5 秒本机缓冲，未确认人脸不送识别；播放及进程交接时仍暂停收音。画面超过 1 秒未更新也使用相同收尾策略，不再把视频延迟升级为强制取消；实际共享音频断连、摄像头工作线程退出、手动停止和切换设置仍立即取消。此离场播完策略仅作用于 local-cascade，下文原生入口仍使用取消。
+
+设备 stdout 的 `voice-lifecycle` JSON 记录请求收尾、强制取消、喇叭排空及进程退出的时间、阶段、turnId 与原因，`robot-console.ps1 -Action Logs` 可查看。仅记录生命周期元数据，不记录转写、回复、音频或凭据。
 
 本链路由 `voice_session.py` 选择 `board-cascade-main.ts`，与原生入口共用音频 broker。下文 LLaMA-Omni2 原生模式为保留的独立入口，其“不接工作台记忆/Pi”的限制不适用于 local-cascade。固件须实际返回 `AUDIO_READY rate=24000 volume=80`；若板上仍为 volume=60 等旧测试固件，必须更新配套应用，不能只改网页标签。
 

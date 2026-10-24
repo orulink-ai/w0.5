@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 
 class VoiceSession:
     def __init__(self, port, endpoint, on_event, stop_event, broker=None, prompt=None, once=False, mouth_provider=None,
-                 activation=None, prelisten=False, input_gain_db=0):
+                 activation=None, prelisten=False, input_gain_db=0, finish_event=None):
         self.port = port
         self.endpoint = endpoint
         self.on_event = on_event
@@ -30,6 +30,7 @@ class VoiceSession:
         self.activation = activation
         self.prelisten = prelisten
         self.input_gain_db = input_gain_db
+        self.finish_event = finish_event
 
     def run(self):
         url = urlsplit(self.endpoint)
@@ -93,12 +94,25 @@ class VoiceSession:
         deadline = time.monotonic() + 180
         next_mouth = 0
         activated = False
+        finish_sent = False
+        parked = False
         try:
             self.on_event('state', '正在启动 vi-agent · 检查本地语音模型…')
             while True:
                 if self.stop_event.is_set():
                     break
-                if self.activation is not None and self.activation[0].is_set() and not activated:
+                if self.finish_event is not None and self.finish_event.is_set() and not finish_sent:
+                    if pipeline != 'local-cascade':
+                        self.stop_event.set()
+                        break
+                    try:
+                        process.stdin.write('finish-turn\n')
+                        process.stdin.flush()
+                    except (OSError, ValueError):
+                        # Still drain errors and require an explicit clean completion.
+                        pass
+                    finish_sent = True
+                if self.activation is not None and self.activation[0].is_set() and not activated and not finish_sent:
                     process.stdin.write(json.dumps({'type': 'activate', 'since': self.activation[1]['since']}) + '\n')
                     process.stdin.flush()
                     activated = True
@@ -143,6 +157,8 @@ class VoiceSession:
                     done = True
                     deadline = time.monotonic() + 45
                     self.on_event('turn-done', text if isinstance(text, str) else '')
+                elif kind == 'parked' and finish_sent:
+                    parked = True
                 if kind == 'state' and isinstance(text, str) and text.startswith('正在思考'):
                     deadline = time.monotonic() + 150
                 elif kind == 'state' and isinstance(text, str) and text.startswith('正在聆听'):
@@ -150,7 +166,7 @@ class VoiceSession:
                     # while the person is quiet during the same conversation.
                     deadline = time.monotonic() + 45
             code = process.wait(timeout=12) if not self.stop_event.is_set() else None
-            if not self.stop_event.is_set() and (code != 0 or not done or error):
+            if not self.stop_event.is_set() and (code != 0 or not (done or parked) or error):
                 raise RuntimeError(error or 'vi-agent 语音未完成：' + ' | '.join(diagnostic))
         finally:
             reader_stop.set()
