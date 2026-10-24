@@ -91,7 +91,7 @@ void setup() {
   pwm_loopback::begin();
   console.println("#LOOPBACK,PA8->PA0,250Hz,high_us=2000,period_us=4000,angle_deg=179.96");
 #endif
-  console.println("AS5600 PWM / PA0 TIM2 hardware capture, filter 16us / SimpleFOC GenericSensor");
+  console.println("AS5600 PWM / PA0 TIM2 8MHz capture, filter ~1us at HSI16 / SimpleFOC GenericSensor");
   console.println("status,angle_deg,velocity_rad_s,frequency_hz,high_us,period_us");
   printControlStatus();
 }

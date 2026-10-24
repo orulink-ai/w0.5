@@ -89,5 +89,55 @@ int main() {
   require(wrapped.period_us == 1000 && wrapped.high_us == 500, "micros rollover");
   require(decode(wrapped, 600).valid, "freshness survives rollover");
   require(!decode(wrapped, 3500).valid, "timeout survives rollover");
+
+  // Sub-microsecond information must survive the capture/decoder boundary,
+  // even when the integer-microsecond telemetry shows identical pulse widths.
+  TimerCapture precise;
+  precise.frame(6000, 17400, 100, true, false, 8000000);
+  precise.frame(6000, 17400, 2275, true, false, 8000000);
+  const auto first = precise.sample();
+  precise.frame(6004, 17400, 4450, true, false, 8000000);
+  const auto second = precise.sample();
+  require(first.high_us == second.high_us, "telemetry can share an integer width");
+  require(second.high_ticks == 6004 && second.period_ticks == 17400 &&
+              second.counter_hz == 8000000, "capture retains raw timer units");
+  const auto a = decode(first, 2275);
+  const auto b = decode(second, 4450);
+  require(a.valid && b.valid, "8 MHz captures decode");
+  near(a.frequency_hz, 8000000.0f / 17400, 0.001f, "raw counter frequency");
+  near(toDegrees(b.angle_rad - a.angle_rad),
+       4351.0f * 4 / 17400 * 360 / 4096, 0.0001f,
+       "half-microsecond pulse difference is retained");
+
+  for (const uint32_t period_ticks : {69568U, 34784U, 17392U, 8696U}) {
+    for (uint32_t count = 0; count < 4096; ++count) {
+      const auto high_ticks = static_cast<uint32_t>(std::lround(
+          static_cast<double>(128U + count) * period_ticks / 4351));
+      precise.frame(high_ticks, period_ticks, 100, true, false, 8000000);
+      const auto result = decode(precise.sample(), 100);
+      require(result.valid, "all 4096 positions decode at every PWM frequency");
+      const float half_tick_degrees = 0.5f * 4351 / period_ticks * 360 / 4096;
+      near(toDegrees(result.angle_rad), count * 360.0f / 4096,
+           half_tick_degrees + 0.0001f, "error bounded by timer quantization");
+    }
+  }
+  precise.frame(4000, 8001, UINT32_MAX - 100, true, false, 8000000);
+  const auto fractional_period = precise.sample();
+  require(decode(fractional_period, 2899).valid,
+          "freshness retains fractional period across micros rollover");
+  require(!decode(fractional_period, 2900).valid,
+          "fractional period expires after three complete periods");
+  precise.frame(500, UINT32_MAX, 100, true, false, 8000000);
+  require(!decode(precise.sample(), 100).valid, "long raw periods cannot overflow validation");
+  precise.frame(8000, 7999, 100, true, false, 8000000);
+  require(!decode(precise.sample(), 100).valid, "raw high cannot exceed period");
+  precise.frame(4000, 7599, 100, true, false, 8000000);
+  require(!decode(precise.sample(), 100).valid, "raw period below supported range");
+  precise.frame(40000, 80001, 100, true, false, 8000000);
+  require(!decode(precise.sample(), 100).valid, "raw period above supported range");
+  precise.frame(4000, 8000, 100, true, true, 8000000);
+  require(!decode(precise.sample(), 100).valid, "raw overcapture rejected");
+  precise.frame(4000, 8000, 100, true, false, 0);
+  require(!decode(precise.sample(), 100).valid, "zero counter rate rejected");
   std::cout << "PASS: AS5600 PWM decoding, edge capture, timeout and rollover\n";
 }
