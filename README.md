@@ -39,6 +39,14 @@ docs/                  # 架构、测试及硬件验证说明
 
 详见 [架构说明](docs/architecture.md) 与 [硬件验证清单](docs/bringup.md)。
 
+## 视觉对话与协作开发
+
+**完整的“看到人脸 → 聆听 → 本地识别 → 对话 → 开发板播报”测试，必须同时使用本仓库和 [vi-agent](https://github.com/orulink-ai/vi-agent)，仅拉取 w0.5 不够。** 两个仓库应放在同一父目录，使用配套的 `feat/local-cascade-robot` 功能分支；先确认两个远程分支均已发布，不要直接使用 main 代替。模型权重、Python 环境和本机配置需要在新电脑重新准备。
+
+纯摄像头、人脸检测和 ID 跟踪不依赖对话模型；但“人脸框跟踪”目前没有连接到电机控制。后续需要新增从人脸位置到运动控制的链路，不能把现有界面中的跟踪误认为电机已经会跟随。
+
+Mac 可作为后续开发平台，**当前完整 USB 视觉对话尚未在 macOS 验证，也不能直接照搬 Windows 一键脚本**。串口路径大小写、启动器、虚拟环境路径及依赖需要适配。双仓分工、Mac 已知阻碍和电机跟踪开发步骤见 [视觉对话与 Mac 协作交接说明](docs/visual-dialogue-handoff.zh-CN.md)。
+
 ## 摄像头模块 / Camera module
 
 新增独立 ESP32-P4 + IMX708 USB 视频与电脑端 YuNet / ByteTrack 追踪调试版本。它不控制现有电机，画质与持续帧率仍待验收。
