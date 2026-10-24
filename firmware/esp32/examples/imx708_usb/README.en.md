@@ -2,7 +2,9 @@
 
 [中文](README.md) · [Desktop app](../../../../tools/camera_facetrack/README.en.md) · [Protocol and validation](../../../../docs/camera-imx708.en.md)
 
-Status: `wtcc-live-15` was built and flashed in the original development project, then identified over serial. The migrated entry points also passed source preparation and a full ESP-IDF v6.0.2 build on 2026-10-24 (941,616-byte application; no new flash operation). Image quality and autofocus still require hardware acceptance. This example builds independently of the ESP32-C6 Mini controller and STM32 motor firmware.
+Status: the current source is `wtcc-live-18`, adding bandwidth headroom for continuous video alongside onboard microphone capture and SPK playback at volume **80**. The previous migrated `wtcc-live-15` video entry passed an ESP-IDF v6.0.2 build on 2026-10-24 (941,616 bytes); that older build does not validate concurrent audio. The user confirmed hearing three test tones at volume 80. LLaMA-Omni2 Chinese conversation and audio integrity during continuous preview still require hardware testing. Image quality and autofocus also require acceptance. This example builds independently of the ESP32-C6 Mini controller and STM32 motor firmware.
+
+v18 build validation (2026-10-24): ESP-IDF v6.0.2 incremental compilation and partition-size checks passed with a 1,031,360-byte application. Offline C transport tests passed. These checks do not validate concurrent 4 Mbaud audio/video or Chinese conversation on hardware.
 
 ## Source layout
 
@@ -17,7 +19,28 @@ Status: `wtcc-live-15` was built and flashed in the original development project
 - Type-C through CH343 USB-UART: UART0 TX GPIO37 / RX GPIO38, 4 Mbaud, 8N1. COM15 is an example development port.
 - The board has a C6 wireless companion, but this version starts no Wi-Fi and requires no provisioning or native high-speed USB adapter.
 
-Check pins for other P4 boards. Disconnect power before changing CSI or supply wiring. This example produces video and never commands robot or pan/tilt motors.
+Check pins for other P4 boards. Disconnect power before changing CSI or supply wiring. This example produces video and audio and never commands robot or pan/tilt motors.
+
+## Microphone and speaker
+
+The ESP32-P4-WIFI6 ES8311 codec (`0x18`) shares the initialized camera I2C0 bus. NS4150B amplifier enable is GPIO53. I2S0 MCLK/BCLK/WS/DOUT/DIN use GPIO13/12/10/9/11 respectively. Connect the speaker to the board's two-pin **SPK** connector; capture uses the onboard microphone. The codec dependency is pinned to `espressif/esp_codec_dev 1.6.2`.
+
+`AUDIO START` initializes audio on demand, with volume 80 and microphone gain 30 dB. UART audio is **24 kHz mono PCM16LE**, up to 480 samples (20 ms) per packet. Internally I2S uses stereo: playback duplicates channels and recording selects the left channel. One host serial owner demultiplexes video, microphone data and acknowledgements; face detection and voice interaction do not stop preview. Only microphone capture pauses during AI playback to avoid recording the reply as a new utterance.
+
+During capture or playback, v18 changes the video target from 2.4 Mbit/s at 28 FPS to 1 Mbit/s at 14 FPS, restoring it afterwards. Image dimensions, pins and volume are unchanged. I2S DMA capacity increases from 40 to 200 ms, with matching silence and drain timing for `AUDIO END`. UART RX interrupts trigger at 32 bytes with a two-symbol tail timeout for additional 4 Mbaud receive headroom. The host must wait for `AUDIO_RX` before sending raw PCM. Hardware acceptance must still measure CRC errors, microphone sequence gaps, ACK latency and audible quality; bitrate control is not a strict maximum IDR size.
+
+| Command | Reply and behavior |
+| --- | --- |
+| `AUDIO START` | `AUDIO_READY rate=24000 volume=80`, or `AUDIO_ERROR ...` |
+| `MIC START` / `MIC STOP` | `MIC_READY ...` / `MIC_STOPPED`; recording emits `MIC_DATA <sequence> <base64 PCM>` |
+| `AUDIO DATA <sequence> <hex CRC32> <base64>` | Validates and writes PCM, replying `AUDIO_ACK <sequence>` |
+| `AUDIO BIN <sequence> <byte count> <hex CRC32>` | Wait for `AUDIO_RX <sequence> <byte count>`, send raw PCM, then wait for `AUDIO_ACK <sequence>`; maximum 960 bytes |
+| `AUDIO END` | Writes silence and drains DMA before `AUDIO_DONE`; a packet ACK only confirms the write |
+| `AUDIO STOP` | Mutes and clears queued playback, then replies `AUDIO_STOPPED` |
+| `AUDIO TONE` | Diagnostic square wave, followed by `AUDIO_TONE_DONE ...` |
+| `AUDIO BAUD 1000000` / `AUDIO BAUD 4000000` | After receiving `AUDIO_BAUD ...` at the old rate, change the host UART rate too |
+
+Text commands end in LF. CRC32 covers decoded mono PCM and matches `esp_rom_crc32_le(0, ...)` / Python `zlib.crc32`. `STATUS` includes `fw=wtcc-live-18 audio=pcm24k mic=pcm24k volume=80`. Successful writes, host tests and HTTP readiness do not establish audible playback or successful Chinese conversation.
 
 ## Prepare and build
 

@@ -1,0 +1,20 @@
+{
+  "viAgentRoot": "../../../vi-agent",
+  "modelRoot": "../../../llama-omni2",
+  "matchaRoot": "../../../matcha-tts-runtime",
+  "whisperRoot": "../../../whisper-runtime",
+  "cameraPython": ".venv/Scripts/python.exe",
+  "modelPython": "../../../llama-omni2/.venv/Scripts/python.exe",
+  "serialPort": "COM15",
+  "features": {
+    "camera": true,
+    "faceVoice": true,
+    "workbench": false
+  },
+  "ports": {
+    "model": 8790,
+    "device": 8791,
+    "web": 5173,
+    "api": 8787
+  }
+}

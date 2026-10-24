@@ -44,7 +44,7 @@ def main():
             executable = out/('test.exe' if sys.platform == 'win32' else 'test')
             subprocess.run(common + [str(source), '-o', str(executable)], check=True)
             subprocess.run([str(executable)], check=True)
-    print('PASS: partial writes, shared deadline, blocked peer, zero/error writes, IDR recovery and PTS wrap')
+    print('PASS: bounded audio prefill, short END, STOP generation, packet order, partial writes, shared deadline, IDR recovery and PTS wrap')
 
 
 if __name__ == '__main__':

@@ -63,6 +63,7 @@
 #include "driver/uart.h"
 #include "esp_rom_crc.h"
 #include "camera_provision.h"
+#include "board_audio.h"
 #include "dw9807.h"
 #include "esp_video_isp_pipeline.h"
 #include "esp_video_isp_ioctl.h"
@@ -943,14 +944,22 @@ static bool usb_active(void)
     return s_usb_deadline && (int32_t)(s_usb_deadline - xTaskGetTickCount()) > 0;
 }
 
+static void usb_video_profile(bool audio)
+{
+    /* Keep face preview running with wire and CPU headroom for 24 kHz PCM.
+     * Rate control alone is not a strict maximum video-record size. */
+    apply_skip(audio ? 2 : 1);
+    uint32_t bitrate = audio ? 1000000 : 2400000;
+    esp_h264_enc_set_bitrate((esp_h264_enc_param_handle_t)s_enc_param, bitrate);
+    s_bitrate = bitrate;
+}
+
 static void usb_video_control(bool enabled)
 {
     bool was_active = usb_active();
     s_usb_deadline = enabled ? xTaskGetTickCount() + pdMS_TO_TICKS(5000) : 0;
     if (enabled && !was_active && s_enc_param) {
-        apply_skip(1);
-        esp_h264_enc_set_bitrate((esp_h264_enc_param_handle_t)s_enc_param, 2400000);
-        s_bitrate = 2400000;
+        usb_video_profile(board_audio_is_active());
     }
 }
 
@@ -961,8 +970,14 @@ static void usb_video_task(void *unused)
     if (!buf) { ESP_LOGE(TAG, "no PSRAM for USB video"); vTaskDelete(NULL); return; }
     uint32_t seq = 0;
     bool joined = false;
+    bool audio_profile = false;
     for (;;) {
         if (!usb_active()) { joined = false; vTaskDelay(1); continue; }
+        bool audio = board_audio_is_active();
+        if (s_enc_param && audio != audio_profile) {
+            usb_video_profile(audio);
+            audio_profile = audio;
+        }
         if (!joined) {
             joined = ring_join(&seq);
             if (!joined) { vTaskDelay(1); continue; }

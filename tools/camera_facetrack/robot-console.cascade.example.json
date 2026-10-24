@@ -1,0 +1,12 @@
+{
+  "pipeline": "local-cascade",
+  "viAgentRoot": "../../../vi-agent",
+  "modelRoot": "../../../vi-agent/models/local-cascade",
+  "matchaRoot": "../../../matcha-tts-runtime",
+  "whisperRoot": "../../../whisper-runtime",
+  "cameraPython": ".venv/Scripts/python.exe",
+  "modelPython": "../../../vi-agent/.venv-cascade/Scripts/python.exe",
+  "serialPort": "COM15",
+  "features": { "camera": true, "faceVoice": true, "workbench": true },
+  "ports": { "model": 8790, "device": 8791, "web": 5173, "api": 8787 }
+}

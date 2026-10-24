@@ -1,6 +1,7 @@
 """YuNet detections -> Supervision ByteTrack. No face recognition or recording."""
 from pathlib import Path
 import hashlib
+import os
 import time
 import urllib.request
 
@@ -62,6 +63,9 @@ def faces_to_detections(faces, scale_x=1.0, scale_y=1.0):
 
 class FaceEngine:
     def __init__(self, activation=0.6, buffer=30):
+        if os.environ.get('VI_VOICE_PROVIDER') == 'local-cascade':
+            # Avoid OpenCV consuming every CPU core alongside ASR and TTS.
+            cv2.setNumThreads(1)
         if not MODEL.exists():
             raise FileNotFoundError('缺少 YuNet 模型，请先运行 setup.ps1。')
         # Keep weak detections for ByteTrack's second association stage.

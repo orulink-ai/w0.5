@@ -45,10 +45,14 @@ docs/                  # 架构、测试及硬件验证说明
 
 ```powershell
 python tools/camera.py setup
-python tools/camera.py dev --port COM15
+pwsh -File tools/camera_facetrack/robot-console.ps1 -Action Start -OpenBrowser
 python tools/camera.py test
 ```
 
 中文：[软件运行](tools/camera_facetrack/README.md)、[固件构建与接线](firmware/esp32/examples/imx708_usb/README.md)、[协议与验证](docs/camera-imx708.md)。
 
 English: [desktop setup](tools/camera_facetrack/README.en.md), [firmware and wiring](firmware/esp32/examples/imx708_usb/README.en.md), [protocol and validation](docs/camera-imx708.en.md). The camera example is independent of motion control; image quality and sustained FPS remain under validation.
+
+统一启动器读取 `tools/camera_facetrack/robot-console.example.json` 或私有 `runtime/robot-console/config.json`，默认管理 LLaMA-Omni2 端到端语音模型、隐藏的摄像头后台与一个网页入口，无需任何 API Key 或额外文本模型。可配置路径、串口和 camera/faceVoice/workbench 开关；workbench 默认关闭，不让 Pi 或云配置阻塞原生语音。模型环境、权重与依赖须先安装。`-Action Status|Logs|Stop|Restart` 管理本脚本创建的服务，复用的已有服务不会被结束。中英文安装步骤见上面的软件运行说明。
+
+麦克风与喇叭使用同一 ESP32-P4 上的 ES8311，音量保持 80。人脸触发语音通过相邻的 vi-agent 项目对话，默认在场连续对话，也可选择须离开后重新出现才触发下一轮的单轮模式；电脑端单一 UART broker 在 4 Mbaud 下分流视频、麦克风和音频确认，视频与人脸追踪持续运行。v19 使用 400ms 软件播放缓冲及 200ms 预填充，音频期间将视频目标降为 1Mbps / 14FPS。控制台提供本机 HTTP 8791，统一网页入口为 `http://127.0.0.1:5173`。此前手动中文语音已获用户确认；v19 已刷入并完成过人脸自动触发的并发回合。同一 Node 进程持续会话已实测多轮；本次第三轮的实际原因是 12 秒未检测到讲话而超时，期间收到 607 个麦克风包，序号缺口和传输错误均为 0，并非 bridge 断连。首因保留已修复；正在调整为安静时持续聆听、仅无音频包等异常才报错，尚待实机回归。会话端已延长 45 秒看门狗并接入心跳，相关 7 项回归通过。当前模型首音频约 6–13 秒，音质与流畅性尚未验收。配置见[电脑端语音说明](tools/camera_facetrack/README.md#人脸触发语音实验)。

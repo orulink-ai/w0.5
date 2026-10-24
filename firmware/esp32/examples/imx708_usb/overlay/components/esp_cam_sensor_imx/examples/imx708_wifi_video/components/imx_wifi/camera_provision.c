@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "camera_provision.h"
+#include "board_audio.h"
 #include "driver/uart.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
@@ -49,13 +50,15 @@ static bool decode_field(const char *encoded, char *out, size_t cap)
 
 static void status(void)
 {
-    printf("CAMERA_STATUS ip=0.0.0.0 configured=%d fw=wtcc-live-15 connected=0 transport=usb baud=4000000\n",
+    printf("CAMERA_STATUS ip=0.0.0.0 configured=%d fw=wtcc-live-19 connected=0 transport=usb baud=4000000 audio=pcm24k mic=pcm24k volume=80\n",
            s_ssid[0] != '\0');
     fflush(stdout);
 }
 
 static void command(char *line)
 {
+    if (strncmp(line, "AUDIO ", 6) == 0) { board_audio_command(line); return; }
+    if (strncmp(line, "MIC ", 4) == 0) { board_audio_command(line); return; }
     if (strcmp(line, "STATUS") == 0) { status(); return; }
     if (strncmp(line, "IMAGE ", 6) == 0) {
         if (s_image_callback) s_image_callback(line);
@@ -65,7 +68,7 @@ static void command(char *line)
         if (s_video_callback) s_video_callback(strcmp(line, "VIDEO ON") == 0);
         return;
     }
-    if (strncmp(line, "CONFIG ", 7) != 0) return;
+    if (strncmp(line, "CONFIG ", 7) != 0) { printf("CAMERA_COMMAND_ERROR length=%u\n", (unsigned)strlen(line)); fflush(stdout); return; }
     char *ssid_b64 = line + 7;
     char *password_b64 = strchr(ssid_b64, ' ');
     char ssid[33] = {0}, password[65] = {0};
@@ -95,12 +98,13 @@ static void command(char *line)
 static void serial_task(void *unused)
 {
     (void)unused;
-    char line[256]; size_t n = 0; bool discard = false;
+    char line[1536]; size_t n = 0; bool discard = false;
     for (;;) {
         uint8_t c;
         if (uart_read_bytes(CONFIG_ESP_CONSOLE_UART_NUM, &c, 1, pdMS_TO_TICKS(200)) <= 0) continue;
         if (c == '\r') continue;
         if (c == '\n') {
+            if (discard) { puts("CAMERA_COMMAND_ERROR overflow"); fflush(stdout); }
             if (!discard && n) { line[n] = '\0'; command(line); }
             memset(line, 0, sizeof(line)); n = 0; discard = false;
         } else if (n + 1 < sizeof(line) && !discard) line[n++] = (char)c;
@@ -131,9 +135,13 @@ esp_err_t camera_provision_init(void)
         .stop_bits = UART_STOP_BITS_1, .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .source_clk = UART_SCLK_DEFAULT,
     };
-    esp_err_t err = uart_driver_install(CONFIG_ESP_CONSOLE_UART_NUM, 1024, 0, 0, NULL, 0);
+    esp_err_t err = uart_driver_install(CONFIG_ESP_CONSOLE_UART_NUM, 8192, 0, 0, NULL, 0);
     if (err == ESP_OK) err = uart_param_config(CONFIG_ESP_CONSOLE_UART_NUM, &config);
-    if (err == ESP_OK && xTaskCreate(serial_task, "camera_config", 4096, NULL, 4, NULL) != pdPASS) {
+    /* At 4 Mbaud a 120-byte FIFO threshold leaves almost no ISR headroom.
+     * Request service after 32 bytes, with a short tail timeout. */
+    if (err == ESP_OK) err = uart_set_rx_full_threshold(CONFIG_ESP_CONSOLE_UART_NUM, 32);
+    if (err == ESP_OK) err = uart_set_rx_timeout(CONFIG_ESP_CONSOLE_UART_NUM, 2);
+    if (err == ESP_OK && xTaskCreate(serial_task, "camera_config", 8192, NULL, 4, NULL) != pdPASS) {
         err = ESP_ERR_NO_MEM;
     }
     if (err != ESP_OK) { printf("CAMERA_UART_ERROR %s\n", esp_err_to_name(err)); return err; }

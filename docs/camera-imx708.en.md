@@ -31,6 +31,10 @@ The firmware holds one output lock for an entire packet; logs may appear between
 
 ASCII commands end with a newline: `STATUS`, `VIDEO ON` and `VIDEO OFF`. Video uses a five-second lease renewed every two seconds. ISP diagnostics include `IMAGE STATUS`, `IMAGE TARGET 32..112`, `IMAGE BLACK 0..32`, `IMAGE FOCUS 400..720` and `IMAGE FOCUS AUTO`. These runtime settings are not persisted to NVS. Focus status reports a driver-accepted position, not a measured optical distance.
 
+v18 retains video protocol v1. One host serial owner reads continuously, consumes complete binary video records according to their length, and dispatches inter-record `MIC_DATA` and `AUDIO_*` lines. Newlines or printable text inside H.264 are never control events. One write transaction lock covers the `AUDIO BIN` header, waiting for `AUDIO_RX`, PCM and its ACK, preventing keepalives or other commands from entering the transaction. Voice interaction keeps video running; only microphone capture pauses during playback.
+
+While audio is active, the encoder targets 1 Mbit/s at 14 FPS, returning to 2.4 Mbit/s at 28 FPS when idle. I2S DMA holds 200 ms and the UART RX interrupt threshold is 32 bytes. A 4 Mbaud 8N1 link carries about 400 KB/s in each direction; 1 Mbit/s video plus base64 microphone data uses about 190 KB/s before IDR bursts and scheduling overhead. Entire video records still share one output lock, so worst-case audio latency is not guaranteed. Concurrent operation requires hardware measurements rather than an average bitrate claim.
+
 ## Configuration and quality
 
 `wtcc-live-15` captures 1920×1080 RAW10, crops eight vertical lines to 1920×1072 and targets 28 FPS. H.264 uses 2.4 Mbit/s, GOP 14 and QP 20–40. The aligned encoder input is used directly without PPA scaling. A nominal 12 MP sensor does not imply a 12 MP streaming mode.
@@ -49,6 +53,7 @@ These are historical observations on the development machine, not guarantees or 
 | v14 GUI | User screenshot around 17 displayed FPS; blur remained. Processing FPS differs from display FPS |
 | v15 original project | Build, application flash verification and serial version query succeeded; image-quality acceptance was not completed |
 | v15 focus sweep | No face detected; background calibration refused; no accepted focus result |
+| v18 concurrency-headroom build | ESP-IDF v6.0.2 incremental build, partition check and offline C transport tests passed; application 1,031,360 bytes. Continuous video and audio integrity still require hardware testing |
 
 Migration validation (2026-10-24): installation and model setup in the new directory succeeded; all 18 Python tests, Tk GUI initialization and host C transport tests passed. After shortening the Windows build path, the full ESP-IDF v6.0.2 build passed with a 941,616-byte application. No new flash operation or image-quality acceptance was performed during migration. Credential-scan heuristic matches were reviewed as Tk input widgets and variable assignments, containing no actual passwords. Scene credentials, logs, images and backups are excluded.
 
