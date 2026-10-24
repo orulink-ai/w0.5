@@ -215,6 +215,7 @@ def make_server(reader, store, port=8840):
                          "/components/legacy-controls.js": ("components/legacy-controls.js", "application/javascript; charset=utf-8"),
                          "/components/closed-loop.js": ("components/closed-loop.js", "application/javascript; charset=utf-8"),
                          "/components/lease-keeper.js": ("components/lease-keeper.js", "application/javascript; charset=utf-8"),
+                         "/components/live-position.js": ("components/live-position.js", "application/javascript; charset=utf-8"),
                          "/style.css": ("style.css", "text/css; charset=utf-8"),
                          "/robot-viewer.js": ("robot-viewer.js", "application/javascript; charset=utf-8"),
                          "/robot-finishes.mjs": ("robot-finishes.mjs", "application/javascript; charset=utf-8"),

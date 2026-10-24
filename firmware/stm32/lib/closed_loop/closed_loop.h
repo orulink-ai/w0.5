@@ -59,6 +59,12 @@ class Policy {
   bool calibrated() const { return direction_ != 0; }
   bool running() const { return running_; }
   bool faulted() const { return fault_; }
+  bool overspeedEnabled() const { return overspeed_enabled_; }
+  bool setOverspeedEnabled(bool enabled) {
+    if (running_ || (fault_ && feedback_fault_ != FeedbackFault::Overspeed)) return false;
+    overspeed_enabled_ = enabled;
+    return true;
+  }
   FeedbackFault feedbackFault() const { return feedback_fault_; }
   Mode mode() const { return mode_; }
   float relative(float raw) const { return direction_ * raw - zero_; }
@@ -99,6 +105,13 @@ class Policy {
     running_ = true;
     return true;
   }
+  bool retargetPosition(float target, uint32_t now) {
+    if(!running_||fault_||mode_!=Mode::Position||!std::isfinite(target)||
+       target<lower_||target>upper_)return false;
+    if(!reference_.retarget(target,now))return false;
+    requested_=target;
+    return true;
+  }
   bool startVelocity(float velocity_rad_s, uint32_t, bool valid, float current_raw) {
     if (!ready(valid, current_raw) || !std::isfinite(velocity_rad_s) ||
         std::fabs(velocity_rad_s) > kTwoPi/12 || std::fabs(velocity_rad_s) < kTwoPi/600) return false;
@@ -108,12 +121,21 @@ class Policy {
   }
   void stop() { running_ = false; }
   void fail() { running_ = false; fault_ = true; }
+  // A manual acknowledgement clears only the overspeed latch. Calibration and
+  // origin survive, but the previous move never resumes without a new START.
+  bool resetOverspeed(bool sensor_valid, float raw_velocity) {
+    if (running_ || !fault_ || feedback_fault_ != FeedbackFault::Overspeed ||
+        !sensor_valid || !std::isfinite(raw_velocity) || std::fabs(raw_velocity) > .2f) return false;
+    fault_ = false;
+    feedback_fault_ = FeedbackFault::None;
+    return true;
+  }
   void tick(uint32_t, bool sensor_valid, bool hardware_fault, float raw_velocity=0) {
     if (hardware_fault) { feedback_fault_=FeedbackFault::Hardware; fail(); }
     if (running_ && (!sensor_valid || !std::isfinite(raw_velocity))) {
       feedback_fault_=FeedbackFault::SensorInvalid; fail();
     }
-    if (running_ && std::fabs(raw_velocity)>2) {
+    if (running_ && overspeed_enabled_ && std::fabs(raw_velocity)>2) {
       feedback_fault_=FeedbackFault::Overspeed; fail();
     }
   }
@@ -145,6 +167,7 @@ class Policy {
   FeedbackFault feedback_fault_=FeedbackFault::None;
   int direction_=0;
   bool running_=false, fault_=false, zero_ready_=false;
+  bool overspeed_enabled_=true; // Per-boot setting, never restored from browser state.
   float zero_=0, lower_=-kHalfPi, upper_=kHalfPi;
   float requested_=0, velocity_=0, position_speed_=.1f;
   Mode mode_=Mode::Position;

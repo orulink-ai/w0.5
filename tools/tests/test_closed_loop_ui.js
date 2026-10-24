@@ -38,6 +38,41 @@ assert.equal(viewModel(state({protocol_version:1,state:"UNCALIBRATED"})).calibra
 assert.equal(viewModel(state({protocol_version:1})).stop,true);
 assert.equal(viewModel(state({protocol_version:2})).ready,false);
 assert.equal(viewModel(state({protocol_version:2,state:"UNCALIBRATED"})).calibrate,false);
+assert.equal(viewModel(state({protocol_version:4})).ready,true);
+assert.equal(viewModel(state({protocol_version:4,state:"UNCALIBRATED"})).calibrate,true);
+assert.equal(viewModel(state({state:"FAULT",fault:"OVERSPEED"})).reset,true);
+assert.equal(viewModel(state({protocol_version:4,state:"FAULT",fault:"OVERSPEED"})).reset,true);
+for (const patch of [{state:"READY",fault:"OVERSPEED"}, {state:"FAULT",fault:"SENSOR_INVALID"},
+  {state:"FAULT",fault:"OVERSPEED",enabled:true}, {state:"FAULT",fault:"OVERSPEED",sensor_valid:false},
+  {state:"FAULT",fault:"OVERSPEED",available:false}, {state:"FAULT",fault:"OVERSPEED",protocol_version:2}]) {
+  assert.equal(viewModel(state(patch)).reset,false,"only a fresh stopped overspeed fault can reset");
+}
+assert.equal(viewModel(state({state:"FAULT",fault:"OVERSPEED"}),true).reset,false);
+assert.equal(viewModel(state({state:"FAULT",fault:"OVERSPEED"}),false).ready,false);
+assert.equal(viewModel(state({overspeed_enabled:true})).overspeedConfig,true);
+assert.equal(viewModel(state({protocol_version:4,overspeed_enabled:true})).overspeedConfig,true);
+assert.equal(viewModel(state({overspeed_enabled:false})).overspeedConfig,true);
+assert.equal(viewModel(state()).overspeedConfig,false,"old firmware has no confirmed switch state");
+assert.equal(viewModel(state({state:"RUNNING",enabled:true,overspeed_enabled:true})).overspeedConfig,false);
+assert.equal(viewModel(state({state:"FAULT",fault:"OVERSPEED",overspeed_enabled:true})).overspeedConfig,true);
+assert.equal(viewModel(state({state:"FAULT",fault:"SENSOR_INVALID",overspeed_enabled:true})).overspeedConfig,false);
+assert.equal(viewModel(state({overspeed_enabled:true}),true).overspeedConfig,false);
+const {ClosedLoopPanel:PayloadPanel}=require("../encoder_dashboard/static/components/closed-loop.js");
+assert.deepEqual(PayloadPanel.prototype.payload.call({state:state({overspeed_enabled:true})},"overspeed"),
+  {action:"overspeed",enabled:false});
+assert.deepEqual(PayloadPanel.prototype.payload.call({state:state({overspeed_enabled:false})},"overspeed"),
+  {action:"overspeed",enabled:true});
+
+const positionInputs = {target_deg:{value:"0"},target_range:{value:"0"}};
+const edits=[];
+const positionPanel = {state:state({soft_min_deg:-45,soft_max_deg:60}), input:name=>positionInputs[name],
+  livePosition:{input:value=>edits.push(["input",value]),release:value=>edits.push(["release",value])}};
+PayloadPanel.prototype.setPositionValue.call(positionPanel,30);
+assert.equal(positionInputs.target_deg.value,"30");assert.equal(positionInputs.target_range.value,"30");
+PayloadPanel.prototype.setPositionValue.call(positionPanel,90,true);
+assert.equal(positionInputs.target_deg.value,"60");assert.deepEqual(edits,[["input",30],["release",60]]);
+PayloadPanel.prototype.setPositionValue.call(positionPanel,NaN);
+assert.equal(edits.length,2,"Transient blank number edits do not send invalid targets");
 
 // Exercise the actual panel request lifecycle without a browser or hardware.
 const {LeaseKeeper}=require("../encoder_dashboard/static/components/lease-keeper.js");
@@ -75,5 +110,11 @@ function testPanel() {
   ({panel,requests,pulses}=testPanel());
   const own=panel.submit("position");requests[0].resolve(accepted());await own;
   assert.deepEqual(pulses,[20]);panel.lease.clear();
+  ({panel,requests,pulses}=testPanel());
+  const resetting=panel.submit("reset");requests[0].resolve(accepted("reset"));await resetting;
+  assert.deepEqual(pulses,[],"RESET cannot acquire a motion lease");
+  ({panel,requests,pulses}=testPanel());
+  const switching=panel.submit("overspeed");requests[0].resolve(accepted("overspeed"));await switching;
+  assert.deepEqual(pulses,[],"Configuring protection cannot acquire a motion lease");
   console.log("Closed-loop panel request lifecycle tests passed");
 })().catch(error=>{console.error(error);process.exitCode=1;});

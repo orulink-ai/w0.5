@@ -21,16 +21,29 @@ from telemetry import TelemetryStore
 
 def status(state='READY', mode='STOP', last=0, calibrated=1, enabled=0,
            sensor=1, position=0, target=0, rpm=0, zero=120, lower=-90, upper=90, fault='NONE',
-           version=3, run_id=None, remaining=None, reason='NONE'):
+           version=3, run_id=None, remaining=None, reason='NONE', overspeed=1):
     base = f'#FOC_STATUS,{version},{state},{mode},{last},{calibrated},{enabled},{sensor},{position},{target},{rpm},{zero},{lower},{upper},{fault}'
     active = state in ('CALIBRATING','RUNNING')
     if version == 1: return base
     run_id = last if run_id is None and active else (0 if run_id is None else run_id)
     remaining = (1500 if active else 0) if remaining is None else remaining
-    return f'{base},{run_id},{remaining},{reason}'
+    extension = f',{overspeed}' if version == 3 and overspeed is not None else ''
+    return f'{base},{run_id},{remaining},{reason}{extension}'
 
 
 class ValidationTests(unittest.TestCase):
+    def test_overspeed_switch_validation_and_feedback(self):
+        for enabled in (True, False):
+            payload={'action':'overspeed','enabled':enabled}
+            self.assertEqual(validate_foc(payload),payload)
+        for enabled in (0, 1, 'false', None, [], float('nan')):
+            with self.assertRaises(ValueError): validate_foc({'action':'overspeed','enabled':enabled})
+        self.assertTrue(parse_status(status())['overspeed_enabled'])
+        self.assertFalse(parse_status(status(overspeed=0))['overspeed_enabled'])
+        self.assertIsNone(parse_status(status(overspeed=None))['overspeed_enabled'])
+        for value in ('true', 2, -1, ''):
+            self.assertIsNone(parse_status(status(overspeed=value)))
+
     def test_actions_and_numeric_boundaries(self):
         for payload in ({'action':'calibrate'}, {'action':'zero'}, {'action':'stop'},
                         {'action':'limits','min_deg':-180,'max_deg':180},
@@ -53,7 +66,7 @@ class ValidationTests(unittest.TestCase):
 
     def test_status_shape_finite_flags_and_versions(self):
         self.assertEqual(parse_status(status())['state'], 'READY')
-        for line in (status().replace(',3,READY', ',4,READY'), status(calibrated=2), status(sensor='true'), status(run_id=5), status(remaining=1501),
+        for line in (status().replace(',3,READY', ',5,READY'), status(calibrated=2), status(sensor='true'), status(run_id=5), status(remaining=1501),
                      status(reason='bad'), status('RUNNING','POSITION',last=5,enabled=0),
                      status(position='nan'), status(rpm='inf'), status(zero=360), status(lower=10),
                      status().replace('READY','BOGUS'), status(mode='JOG'), status(last=-1),
@@ -73,6 +86,50 @@ class ChannelTests(unittest.TestCase):
         self.now = 10
         self.channel = ClosedLoopChannel(clock=lambda:self.now)
         self.channel.reset(True)
+
+    def test_manual_reset_stays_stopped_and_waits_for_status(self):
+        c = self.channel
+        c.consume(status('FAULT', fault='OVERSPEED', reason='FAULT'))
+        request_id, packet = c.begin({'action':'reset'}, True)
+        self.assertEqual(packet, f'FOC,{request_id},RESET\n'.encode())
+        c.consume(f'#FOC_ACK,{request_id},RESET')
+        self.assertEqual(c.wait(request_id,.01)['state'], 'FAULT')
+        self.assertIsNone(c.snapshot()['owned_run_id'])
+        with self.assertRaises(CommandError):
+            c.begin({'action':'position','target_deg':0,'speed_rpm':1}, True)
+        c.consume(status(last=request_id, reason='USER_STOP'))
+        self.assertEqual(c.snapshot()['state'], 'READY')
+        self.assertFalse(c.snapshot()['enabled'])
+        _, packet = c.begin({'action':'position','target_deg':0,'speed_rpm':1}, True)
+        self.assertIn(b'START,POSITION', packet)
+
+    def test_switch_needs_supported_stopped_feedback_and_ack_is_not_state(self):
+        c=self.channel;c.consume(status())
+        request_id,packet=c.begin({'action':'overspeed','enabled':False},True)
+        self.assertEqual(packet,f'FOC,{request_id},OVERSPEED,0\n'.encode())
+        c.consume(f'#FOC_ACK,{request_id},OVERSPEED')
+        self.assertTrue(c.wait(request_id,.01)['overspeed_enabled'])
+        self.assertIsNone(c.snapshot()['owned_run_id'])
+        c.consume(status(last=request_id,overspeed=0))
+        self.assertFalse(c.snapshot()['overspeed_enabled'])
+        for message in (status('RUNNING','POSITION',last=5,enabled=1),
+                        status('FAULT',fault='SENSOR_INVALID'),status(overspeed=None)):
+            other=ClosedLoopChannel();other.reset(True);other.consume(message)
+            with self.assertRaises(CommandError):other.begin({'action':'overspeed','enabled':False},True)
+        other=ClosedLoopChannel();other.reset(True);other.consume(status('FAULT',fault='OVERSPEED'))
+        other.begin({'action':'overspeed','enabled':False},True)
+
+    def test_reset_rejects_other_faults_stale_feedback_and_enabled_driver(self):
+        for message in (status(), status('FAULT',fault='SENSOR_INVALID'),
+                        status('FAULT',fault='OVERSPEED',enabled=1),
+                        status('FAULT',fault='OVERSPEED',sensor=0),
+                        status('FAULT',fault='OVERSPEED',version=2)):
+            c = ClosedLoopChannel(); c.reset(True); c.consume(message)
+            with self.subTest(message=message), self.assertRaises(CommandError):
+                c.begin({'action':'reset'}, True)
+        self.channel.consume(status('FAULT',fault='OVERSPEED'))
+        self.now += 2
+        with self.assertRaises(CommandError): self.channel.begin({'action':'reset'}, True)
 
     def test_calibration_ack_not_completion_and_boot_does_not_start(self):
         c = self.channel
@@ -313,6 +370,36 @@ class HTTPTests(unittest.TestCase):
     def packet(self):
         self.assertTrue(select.select([self.master],[],[],1)[0])
         return os.read(self.master,512).decode().strip().split(',')
+
+    def test_http_manual_reset_never_sends_start_or_keepalive(self):
+        self.store.consume(status('FAULT',fault='OVERSPEED',reason='FAULT'))
+        result=[]
+        request=threading.Thread(target=lambda:result.append(self.post({'action':'reset'})))
+        request.start()
+        packet=self.packet()
+        self.assertEqual(packet[0],'FOC')
+        self.assertEqual(packet[2:],['RESET'])
+        request_id=int(packet[1])
+        os.write(self.master,(f'#FOC_ACK,{request_id},RESET\n'+
+                             status(last=request_id,reason='USER_STOP')+'\n').encode())
+        request.join(2)
+        self.assertFalse(request.is_alive())
+        self.assertEqual(result[0][0],200)
+        self.assertIsNone(self.store.closed_loop.snapshot()['owned_run_id'])
+        self.assertFalse(select.select([self.master],[],[],.05)[0])
+
+    def test_http_switch_ack_does_not_change_reported_protection_or_start(self):
+        result=[]
+        request=threading.Thread(target=lambda:result.append(self.post({'action':'overspeed','enabled':False})))
+        request.start();packet=self.packet()
+        self.assertEqual(packet[2:],['OVERSPEED','0'])
+        request_id=int(packet[1])
+        os.write(self.master,f'#FOC_ACK,{request_id},OVERSPEED\n'.encode())
+        request.join(2);self.assertFalse(request.is_alive())
+        self.assertEqual(result[0][0],200)
+        self.assertTrue(self.store.closed_loop.snapshot()['overspeed_enabled'])
+        self.assertIsNone(self.store.closed_loop.snapshot()['owned_run_id'])
+        self.assertFalse(select.select([self.master],[],[],.05)[0])
 
     def test_http_waits_for_matching_ack_and_stop_preempts_without_replay(self):
         result=[]

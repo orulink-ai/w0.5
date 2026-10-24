@@ -14,9 +14,11 @@ from commands import CommandError, _uint
 STATES = frozenset(('UNCALIBRATED', 'CALIBRATING', 'READY', 'RUNNING', 'FAULT'))
 MODES = frozenset(('STOP', 'POSITION', 'VELOCITY', 'SWEEP', 'SPRING'))
 FIELDS = {
-    'calibrate': (), 'zero': (), 'stop': (),
+    'calibrate': (), 'zero': (), 'stop': (), 'reset': (),
     'limits': ('min_deg', 'max_deg'),
     'position': ('target_deg', 'speed_rpm'), 'velocity': ('rpm',),
+    'overspeed': ('enabled',),
+    'target': ('run_id', 'target_deg'),
 }
 
 
@@ -36,7 +38,13 @@ def validate_foc(payload):
     action = payload['action']
     if action not in FIELDS or set(payload) != {'action', *FIELDS[action]}:
         raise ValueError('闭环动作或参数字段无效。')
+    if action == 'overspeed':
+        if type(payload['enabled']) is not bool:
+            raise ValueError('超速保护 enabled 必须是布尔值。')
+        return dict(payload)
     data = {'action': action, **{name: _number(payload[name]) for name in FIELDS[action]}}
+    if action == 'target' and (type(data['run_id']) is not int or not 1 <= data['run_id'] <= 0x7FFFFFFF):
+        raise ValueError('run_id 必须是有效的正整数。')
     if action == 'limits':
         lower, upper = data['min_deg'], data['max_deg']
         if not -180 <= lower < upper <= 180:
@@ -58,9 +66,17 @@ def validate_foc(payload):
 def parse_status(line):
     fields = line.split(',')
     if not ((len(fields) == 15 and fields[:2] == ['#FOC_STATUS', '1']) or
-            (len(fields) == 18 and fields[0] == '#FOC_STATUS' and fields[1] in ('2', '3'))):
+            (len(fields) == 18 and fields[0] == '#FOC_STATUS' and fields[1] in ('2', '3')) or
+            (len(fields) == 19 and fields[0] == '#FOC_STATUS' and fields[1] in ('3', '4'))):
         return None
     version = int(fields[1])
+    # New v3 firmware appends the confirmed runtime switch. Older frames remain
+    # readable but cannot authorize configuration of a capability they lack.
+    overspeed = None
+    if len(fields) == 19:
+        if fields[18] not in ('0', '1'):
+            return None
+        overspeed = fields[18] == '1'
     try:
         if fields[2] not in STATES or fields[3] not in MODES:
             return None
@@ -76,7 +92,7 @@ def parse_status(line):
                 re.fullmatch(r'[A-Z][A-Z0-9_]{0,31}', fields[14]) is None):
             return None
         lease = {}
-        if version in (2, 3):
+        if version in (2, 3, 4):
             if fields[3] not in ('STOP', 'POSITION', 'VELOCITY'):
                 return None
             run_id, remaining = _uint(fields[15]), _uint(fields[16])
@@ -90,7 +106,8 @@ def parse_status(line):
             if fields[2] == 'RUNNING' and fields[5:8] != ['1', '1', '1']:
                 return None
             lease = {'run_id': run_id, 'lease_remaining_ms': remaining, 'stop_reason': fields[17]}
-        return {'protocol_version': version, **lease, 'state': fields[2], 'mode': fields[3], 'last_id': last_id,
+        return {'protocol_version': version, 'overspeed_enabled': overspeed,
+                **lease, 'state': fields[2], 'mode': fields[3], 'last_id': last_id,
                 'calibrated': fields[5] == '1', 'enabled': fields[6] == '1',
                 'sensor_valid': fields[7] == '1', 'relative_deg': relative,
                 'target_deg': target, 'velocity_rpm': velocity, 'zero_raw_deg': zero,
@@ -156,7 +173,7 @@ class ClosedLoopChannel:
                 self._expire_owner()
                 if (self._owner is not None and last_id >= self._owner and
                         (state.get('run_id') != self._owner or state['state'] not in
-                         ('CALIBRATING', 'RUNNING') or state['protocol_version'] != 3)):
+                         ('CALIBRATING', 'RUNNING') or state['protocol_version'] not in (3, 4))):
                     self._owner = self._owner_at = self._owner_started_at = None
                 if self._command['id'] is not None and last_id >= self._command['id']:
                     self._settling = False
@@ -178,12 +195,16 @@ class ClosedLoopChannel:
                     # State may precede ACK. A newer terminal/different run must
                     # not be resurrected by a delayed acknowledgement.
                     current = self._state or {}
-                    if (current.get('protocol_version') == 3 and
+                    if (current.get('protocol_version') in (3, 4) and
                             (current.get('last_id', 0) < request_id or
                              (current.get('run_id') == request_id and current.get('state') in
                               ('CALIBRATING', 'RUNNING')))):
                         self._owner = request_id
                         self._owner_at = self._owner_started_at = self._clock()
+                if self._command['action'] == 'target':
+                    # TARGET cannot enable, change mode, or renew/acquire a lease.
+                    # Its matching ACK allows the next coalesced edit immediately.
+                    self._settling = False
                 self._finish('accepted')
             elif fields[0] == '#FOC_NACK':
                 self._settling = False
@@ -218,15 +239,33 @@ class ClosedLoopChannel:
             if action == 'stop':
                 self._owner = self._owner_at = self._owner_started_at = None
             if action != 'stop':
-                if status.get('protocol_version') != 3:
-                    raise CommandError('需要 v3 闭环固件，旧协议仅供诊断或停止。')
+                if status.get('protocol_version') not in (3, 4):
+                    raise CommandError('需要 v3/v4 闭环固件，旧协议仅供诊断或停止。')
                 if self._pending is not None or self._settling:
                     raise CommandError('上一请求尚待确认或等待新状态。')
                 if not status['available'] or not sensor_valid or not status.get('sensor_valid'):
                     raise CommandError('闭环状态或编码器数据无效、已超时。')
-                if status.get('enabled') is not False:
+                if action == 'target':
+                    if (status['protocol_version'] != 4 or status['state'] != 'RUNNING' or
+                            status['mode'] != 'POSITION' or not status['calibrated'] or
+                            status.get('enabled') is not True or self._owner != data['run_id'] or
+                            status.get('run_id') != data['run_id'] or status.get('lease_remaining_ms', 0) <= 0):
+                        raise CommandError('实时拖动仅允许更新本页面已启动的位置控制，请先手动启动。')
+                elif status.get('enabled') is not False:
                     raise CommandError('请先停止并等待 EN 关闭。')
-                if action == 'calibrate':
+                if action == 'target':
+                    pass  # Live edits retain the existing mode, speed, and owner.
+                elif action == 'overspeed':
+                    if (type(status.get('overspeed_enabled')) is not bool or
+                            (status['state'] not in ('UNCALIBRATED', 'READY') and not
+                             (status['state'] == 'FAULT' and status.get('fault') == 'OVERSPEED'))):
+                        raise CommandError('超速保护开关需要支持该设置的新固件，并处于停止或超速故障状态。')
+                    self._owner = self._owner_at = self._owner_started_at = None
+                elif action == 'reset':
+                    if status['state'] != 'FAULT' or status.get('fault') != 'OVERSPEED':
+                        raise CommandError('手动复位仅用于已停止的超速故障；其他故障需先检查原因。')
+                    self._owner = self._owner_at = self._owner_started_at = None
+                elif action == 'calibrate':
                     if status['state'] != 'UNCALIBRATED':
                         raise CommandError('校准仅允许在未校准、停机状态开始。')
                 elif status['state'] != 'READY' or not status['calibrated']:
@@ -250,7 +289,8 @@ class ClosedLoopChannel:
             if action in ('position', 'velocity'):
                 parts.append('START')
             parts.append(action.upper())
-            parts.extend(format(data[name], '.8g') for name in FIELDS[action])
+            parts.extend(str(data[name]) if name == 'run_id' else format(data[name], '.8g')
+                         for name in FIELDS[action])
             return request_id, (','.join(parts) + '\n').encode('ascii')
 
     def _expire_owner(self):
@@ -267,7 +307,7 @@ class ClosedLoopChannel:
                 raise CommandError('当前页面未持有已确认的运动租约，请显式重新启动。')
             state = self._state or {}
             age = None if self._seen_at is None else self._clock() - self._seen_at
-            valid = state.get('protocol_version') == 3 and age is not None and age < self.fresh_seconds
+            valid = state.get('protocol_version') in (3, 4) and age is not None and age < self.fresh_seconds
             if state.get('last_id', 0) >= run_id:
                 valid = valid and state.get('run_id') == run_id and state.get('lease_remaining_ms', 0) > 0
             else:

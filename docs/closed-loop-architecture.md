@@ -16,6 +16,7 @@
 | 应用 | `firmware/stm32/examples/encoder_read/src/closed_loop_app.*` | 校准、状态机、策略与硬件调用、ACK及遥测 |
 | 主机 | `tools/encoder_dashboard/closed_loop_commands.py` | 参数校验、请求关联、租约所有权与新鲜度 |
 | 页面 | `static/components/closed-loop.js`、`lease-keeper.js` | 两模式表单、真实状态、显式启动、独立心跳生命周期 |
+| 实时目标 | `static/components/live-position.js` | 本页持有运行权时合并发送拖动目标，单请求在途、200ms限频 |
 
 表中的 `src/` 位于编码器示例目录，`static/` 位于 `tools/encoder_dashboard/`。入口 `closed_loop_main.cpp` 只组合应用并转发setup/loop。FOC控制在MCU执行，不依赖浏览器的实时调度精度。
 
@@ -40,7 +41,17 @@ AS5600原始角度为0～360°；新帧才更新连续多圈角度，跨零不�
 
 保护还包括编码器有效性、软件范围（默认±90°）、实际反馈超速2rad/s、GPIO读回和约100ms看门狗。PB4为nFAULT输入，仅在实物确实连接故障线时反映驱动告警。软件边界不是机械挡块，不保证惯性绝不越界；连续控制也不等于具备电流／温度闭环保护。
 
-## v3接口
+手动快速转轴也可能触发 `OVERSPEED`。页面新增“清除超速故障 · 保持停止”：松手停稳后显式发送 RESET，仅解除超速锁定，保留校准、零点与范围，EN保持关闭、不领取运动租约、不恢复旧动作，用户另点启动。固件要求反馈有效、估计速度绝对值不超过0.2rad/s（约1.9rpm）、EN关闭且无硬件故障；不满足时返回 `RESET_NOT_READY`。其他类型故障不通过此入口清除。此功能需更新包含RESET的固件和后端后使用；未上板验证前不视作实机验收。
+
+另提供“关闭超速保护 / 开启超速保护”。阈值2rad/s约等于114.6°/秒、19.1rpm，与目标速度上限5rpm不同。开关仅在停机、EN低、反馈有效且无其他锁定故障时接受；可以在超速锁定时切换，但不会代替RESET清故障。关闭只跳过超速判定，编码器失效、软限位、硬件故障和通信租约逻辑继续执行；不代表释放位置保持。设置仅保存在本次上电的RAM，芯片重启后默认开启，网页刷新或服务重启不会自动写回。页面只显示固件新鲜状态中的确认值，ACK本身不会改变开关显示，旧固件未报告该字段时禁止切换。
+
+## v4实时拖动与兼容接口
+
+位置模式先显式启动，再拖动目标滑块或修改角度，电机按本次设定的速度平滑跟随；松手后到达最后目标并保持。READY时拖动仅填写目标，不会自动启动。范围取芯片确认的软限位，默认±90°。3rpm相当于18°/秒，90°理想轨迹约5秒；实际响应有偏差。速度参数仍需停止后重新启动修改。
+
+实时请求为 `{"action":"target","run_id":123,"target_deg":30}`，经现有 `POST /api/foc` 发送，串口为 `FOC,<新command_id>,TARGET,<现有run_id>,<角度>`，匹配确认是 `#FOC_ACK,<新command_id>,TARGET`。command_id每次递增，run_id保持原START编号。仅v4、当前本页拥有的RUNNING POSITION、反馈有效、EN高、租约未过期时接受。v3保留基础控制，但不允许TARGET。
+
+TARGET保留规划参考的连续位置、既有速度与PI状态，只改目的地，不启动、不使能、不切模式、不续租。网页最多约5次/秒、单请求在途，期间只保留最新角度，松手最终值仍会送达。停止、断线、切换模式、页面离开或失去运行权会清空队列，迟到请求／响应不能重启电机。运行心跳仍独立维持1500ms租约。
 
 HTTP：
 
@@ -51,24 +62,30 @@ HTTP：
 {"action":"zero"}
 {"action":"limits","min_deg":-90,"max_deg":90}
 {"action":"stop"}
+{"action":"reset"}
+{"action":"overspeed","enabled":false}
 ```
 
-均提交到 `POST /api/foc`。心跳独立提交到 `POST /api/foc/heartbeat`，内容为 `{"run_id":123}`。角度需在固件确认的范围内，速度幅值0.1～5rpm，位置速度必须为正。参数修改需停止后重新显式启动。旧stiffness、往复和弹簧动作不接受。
+均提交到 `POST /api/foc`。心跳独立提交到 `POST /api/foc/heartbeat`，内容为 `{"run_id":123}`。角度需在固件确认的范围内，速度幅值0.1～5rpm，位置速度必须为正。除v4实时位置目标外，参数修改需停止后重新显式启动。旧stiffness、往复和弹簧动作不接受。
 
 串口：
 
 ```text
-FOC,<id>,CALIBRATE|ZERO|STOP
+FOC,<id>,CALIBRATE|ZERO|STOP|RESET
+FOC,<id>,OVERSPEED,<0|1>
 FOC,<id>,LIMITS,<min_deg>,<max_deg>
 FOC,<id>,START,POSITION,<target_deg>,<speed_rpm>
 FOC,<id>,START,VELOCITY,<rpm>
+FOC,<id>,TARGET,<active_run_id>,<target_deg>
 FOC,<active_run_id>,KEEPALIVE
 #FOC_ACK,<id>,<ACTION>
 #FOC_NACK,<id>,<REASON>
-#FOC_STATUS,3,<state>,<mode>,<highwater_id>,<calibrated>,<actual_EN>,<sensor_valid>,<relative_deg>,<requested_target_deg>,<velocity_rpm>,<zero_raw_deg>,<soft_min_deg>,<soft_max_deg>,<fault>,<active_run_id>,<lease_remaining_ms>,<stop_reason>
+#FOC_STATUS,4,<state>,<mode>,<highwater_id>,<calibrated>,<actual_EN>,<sensor_valid>,<relative_deg>,<requested_target_deg>,<velocity_rpm>,<zero_raw_deg>,<soft_min_deg>,<soft_max_deg>,<fault>,<active_run_id>,<lease_remaining_ms>,<stop_reason>,<overspeed_enabled_0_or_1>
 ```
 
-心跳不等待ACK、不改变命令编号高水位、不创建运行；错误run_id直接忽略。ACK只表示接收，运行和到位须看新鲜反馈。CALIBRATING/RUNNING拥有非零run_id，其余状态run_id为0。停止原因包括NONE、USER_STOP、COMM_TIMEOUT、LIMIT、FAULT。旧v1/v2只供诊断或STOP，网页只向v3固件发送启动和心跳。
+v4状态格式与带超速开关字段的v3一致，版本号改为4，保留第19个overspeed_enabled字段。心跳不等待ACK、不改变命令编号高水位、不创建运行；错误run_id直接忽略。ACK只表示接收，运行和到位须看新鲜反馈。CALIBRATING/RUNNING拥有非零run_id，其余状态run_id为0。停止原因包括NONE、USER_STOP、COMM_TIMEOUT、LIMIT、FAULT。旧v1/v2只供诊断或STOP，网页向v3/v4固件发送启动和心跳，仅向v4发送TARGET。
+
+解析兼容未附加`overspeed_enabled`的旧v3状态，开关值视为未知；OVERSPEED配置需要此扩展字段，RESET与OVERSPEED均不创建运行租约、不启动电机。
 
 ## 验证入口
 

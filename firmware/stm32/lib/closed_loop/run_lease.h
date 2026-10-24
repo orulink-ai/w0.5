@@ -15,6 +15,9 @@ class RunLease {
   }
   bool active() const { return run_id_ != 0; }
   uint32_t runId() const { return run_id_; }
+  bool owns(uint32_t run_id, uint32_t now) const {
+    return active() && run_id==run_id_ && remaining(now)>0;
+  }
   uint32_t remaining(uint32_t now) const {
     if (!active()) return 0;
     const uint32_t age = now - refreshed_ms_;

@@ -14,7 +14,7 @@ const char* modeName(closed_loop::Mode mode) {
 void Application::begin() {
   console_.begin(115200);
   if(!hardware_.begin()) fail("INIT_FAILED");
-  console_.println("#FOC_INFO,v3 position servo/velocity; 1V; explicit calibration; 1500ms owner lease");
+  console_.println("#FOC_INFO,v4 position servo/velocity; live TARGET; 1V; explicit calibration; 1500ms owner lease");
   console_.println("#FOC_INFO,PB4 nFAULT protects only a physically connected fault wire");
   console_.println("#FOC_INFO,DEBUG v1: shaft_rad,target_rad,velocity_sp_rad_s,Uq_V,electrical_rad,zero_electrical_rad,direction,measurement_rad_s");
   report();
@@ -64,6 +64,42 @@ void Application::apply(const closed_protocol::Request& r) {
   }
   if(r.id<=high_water_) { reply(false,r.id,"STALE_ID"); return; }
   high_water_=r.id;
+  if(r.action==Action::Target) {
+    // Retarget only the existing position run. This path never enables the
+    // driver, changes mode/PI state, or refreshes the communication lease.
+    const bool accepted=!policy_.faulted()&&!hardware_.faulted()&&
+        !alignment_.active()&&lease_.owns(r.run_id,received_ms)&&
+        hardware_.sensor().valid()&&hardware_.enabled()&&hardware_.pinHighReadback()&&
+        policy_.retargetPosition(toRadians(r.a),received_ms);
+    if(accepted) target_deg_=r.a;
+    reply(accepted,r.id,accepted?"TARGET":"TARGET_NOT_READY");
+    report(); return;
+  }
+  if(r.action==Action::Overspeed) {
+    const bool stopped=!alignment_.active()&&!policy_.running()&&
+                       !hardware_.enabled()&&!hardware_.pinHighReadback();
+    const bool accepted=stopped&&!hardware_.faulted()&&hardware_.sensor().valid()&&
+        policy_.setOverspeedEnabled(r.a==1);
+    if(accepted) lease_.stop(); // Configuration never acquires a motion lease.
+    reply(accepted,r.id,accepted?"OVERSPEED":"OVERSPEED_CONFIG_NOT_READY");
+    report(); return;
+  }
+  if(r.action==Action::Reset) {
+    // Never reset hardware/init faults or enable the bridge as a side effect.
+    const bool stopped=!alignment_.active()&&!policy_.running()&&
+                       !hardware_.enabled()&&!hardware_.pinHighReadback();
+    const bool accepted=stopped&&!hardware_.faulted()&&
+        std::strcmp(fault_,"OVERSPEED")==0&&
+        policy_.resetOverspeed(hardware_.sensor().valid(),hardware_.sensor().measurementVelocity());
+    if(accepted) {
+      stop("USER_STOP");
+      fault_="NONE";
+      hardware_.motor().PID_velocity.reset();
+      hardware_.motor().P_angle.reset();
+    }
+    reply(accepted,r.id,accepted?"RESET":"RESET_NOT_READY");
+    report(); return;
+  }
   if(policy_.faulted()||hardware_.faulted()) { reply(false,r.id,"FAULT"); return; }
   if(alignment_.active()||policy_.running()||hardware_.enabled()) {
     reply(false,r.id,"BUSY"); return;
@@ -175,7 +211,7 @@ void Application::report() {
   const bool faulted=policy_.faulted()||hardware_.faulted();
   const char* state=faulted?"FAULT":alignment_.active()?"CALIBRATING":
       policy_.running()?"RUNNING":policy_.calibrated()?"READY":"UNCALIBRATED";
-  console_.print("#FOC_STATUS,3,"); console_.print(state); console_.print(',');
+  console_.print("#FOC_STATUS,4,"); console_.print(state); console_.print(',');
   console_.print(policy_.running()?modeName(policy_.mode()):"STOP"); console_.print(',');
   console_.print(high_water_); console_.print(','); console_.print(policy_.calibrated()?1:0); console_.print(',');
   console_.print(hardware_.pinHighReadback()?1:0); console_.print(','); console_.print(hardware_.sensor().valid()?1:0); console_.print(',');
@@ -185,7 +221,8 @@ void Application::report() {
   console_.print(closed_protocol::zeroDegreesForWire(policy_.zeroRaw()),3); console_.print(',');
   console_.print(toDegrees(policy_.lower()),3); console_.print(','); console_.print(toDegrees(policy_.upper()),3); console_.print(',');
   console_.print(fault_); console_.print(','); console_.print(lease_.runId()); console_.print(',');
-  console_.print(lease_.remaining(millis())); console_.print(','); console_.println(stop_reason_);
+  console_.print(lease_.remaining(millis())); console_.print(','); console_.print(stop_reason_);
+  console_.print(','); console_.println(policy_.overspeedEnabled()?1:0);
 }
 void Application::debug(bool force) {
   if(!force&&!policy_.running()) return;

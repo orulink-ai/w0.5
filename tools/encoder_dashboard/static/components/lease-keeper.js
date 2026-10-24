@@ -22,7 +22,7 @@
       const control = state?.closed_loop;
       const command = control?.command;
       if (!["calibrate", "position", "velocity"].includes(action) ||
-          control?.protocol_version !== 3 || command?.status !== "accepted" || command.action !== action ||
+          ![3, 4].includes(control?.protocol_version) || command?.status !== "accepted" || command.action !== action ||
           !Number.isInteger(command.id) || command.id <= 0 || command.id > 2147483647 ||
           control.owned_run_id !== command.id || !state.connected ||
           this.terminalHighwater >= command.id || this.latestHighwater > command.id ||
@@ -42,7 +42,7 @@
         this.terminalHighwater = this.latestHighwater = this.latestRunId = 0;
         return;
       }
-      if (!control?.available || control.protocol_version !== 3) { this.clear(); return; }
+      if (!control?.available || ![3, 4].includes(control.protocol_version)) { this.clear(); return; }
       if (control.last_id === 0 && control.state === "UNCALIBRATED" &&
           control.enabled === false && control.calibrated === false && this.latestHighwater > 0) {
         this.clear();

@@ -37,6 +37,10 @@ const state = (patch={}) => ({connected:true, closed_loop:{available:true, suppo
   assert.equal(keeper.runId,null);
   assert.notEqual(keeper.token(),pendingBeforeBoot,"MCU boot invalidates pending HTTP generation");
   assert.equal(keeper.accept("position",state(),pendingBeforeBoot),false);
+  const v4Keeper=new LeaseKeeper({clock,heartbeat:async run=>({ok:true,run_id:run})});
+  assert.equal(v4Keeper.accept("position",state({protocol_version:4}),v4Keeper.token()),true);
+  await flush();v4Keeper.observe(state({protocol_version:4}));assert.equal(v4Keeper.runId,20);
+  v4Keeper.clear();
   let resolve;
   const slow=new LeaseKeeper({clock,heartbeat:()=>new Promise(done=>{resolve=done;})});
   assert.equal(slow.accept("position",state(),slow.token()),true);clock.tick();assert.equal(clock.tasks.size,0,"Only one heartbeat in flight");

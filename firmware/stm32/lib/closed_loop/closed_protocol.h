@@ -13,13 +13,26 @@ inline float zeroDegreesForWire(float raw_radians) {
   if(value<0)value+=360;
   return value>=359.9995f?0:value;
 }
-enum class Action { Calibrate,Zero,Stop,Limits,Position,Velocity,Keepalive };
-struct Request {uint32_t id=0;Action action=Action::Stop;float a=0,b=0;};
+enum class Action { Calibrate,Zero,Stop,Limits,Position,Velocity,Keepalive,Reset,Overspeed,Target };
+struct Request {uint32_t id=0;Action action=Action::Stop;float a=0,b=0;uint32_t run_id=0;};
 enum class Parse {None,Ready,Invalid};
 inline bool number(const char* value,float& result) {
   if(!value||!*value)return false;
   char* end=nullptr;errno=0;result=std::strtof(value,&end);
   return errno==0&&end&&*end=='\0'&&std::isfinite(result);
+}
+inline bool positiveId(const char* value,uint32_t& result) {
+  if(!value||!*value)return false;
+  uint32_t id=0;
+  for(const char* p=value;*p;++p) {
+    if(*p<'0'||*p>'9')return false;
+    const uint32_t digit=*p-'0';
+    if(id>(2147483647U-digit)/10)return false;
+    id=id*10+digit;
+  }
+  if(!id)return false;
+  result=id;
+  return true;
 }
 class Receiver {
  public:
@@ -45,16 +58,21 @@ class Receiver {
     }
     if(count<3||std::strcmp(fields[0],"FOC")!=0)return false;
     uint32_t id=0;
-    if(!*fields[1])return false;
-    for(const char* p=fields[1];*p;++p){if(*p<'0'||*p>'9')return false;const uint32_t digit=*p-'0';if(id>(2147483647U-digit)/10)return false;id=id*10+digit;}
-    if(!id)return false;
+    if(!positiveId(fields[1],id))return false;
     Request r;r.id=id;
     if(count==3) {
       if(!std::strcmp(fields[2],"CALIBRATE"))r.action=Action::Calibrate;
       else if(!std::strcmp(fields[2],"ZERO"))r.action=Action::Zero;
       else if(!std::strcmp(fields[2],"STOP"))r.action=Action::Stop;
+      else if(!std::strcmp(fields[2],"RESET"))r.action=Action::Reset;
       else if(!std::strcmp(fields[2],"KEEPALIVE"))r.action=Action::Keepalive;
       else return false;
+    } else if(count==5&&!std::strcmp(fields[2],"TARGET")) {
+      r.action=Action::Target;
+      if(!positiveId(fields[3],r.run_id)||!number(fields[4],r.a))return false;
+    } else if(count==4&&!std::strcmp(fields[2],"OVERSPEED")) {
+      if(std::strcmp(fields[3],"0")&&std::strcmp(fields[3],"1"))return false;
+      r.action=Action::Overspeed;r.a=fields[3][0]=='1'?1:0;
     } else if(count==5&&!std::strcmp(fields[2],"LIMITS")) {
       r.action=Action::Limits;if(!number(fields[3],r.a)||!number(fields[4],r.b))return false;
     } else if(count>=5&&!std::strcmp(fields[2],"START")) {
@@ -69,7 +87,7 @@ class Receiver {
   char line_[128]{};size_t length_=0;bool overflow_=false;Request request_{};
 };
 inline const char* name(Action action) {
- switch(action){case Action::Calibrate:return "CALIBRATE";case Action::Zero:return "ZERO";case Action::Stop:return "STOP";case Action::Limits:return "LIMITS";case Action::Position:return "POSITION";case Action::Velocity:return "VELOCITY";case Action::Keepalive:return "KEEPALIVE";}
+ switch(action){case Action::Calibrate:return "CALIBRATE";case Action::Zero:return "ZERO";case Action::Stop:return "STOP";case Action::Limits:return "LIMITS";case Action::Position:return "POSITION";case Action::Velocity:return "VELOCITY";case Action::Keepalive:return "KEEPALIVE";case Action::Reset:return "RESET";case Action::Overspeed:return "OVERSPEED";case Action::Target:return "TARGET";}
  return "STOP";
 }
 } // namespace closed_protocol
