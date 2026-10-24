@@ -17,6 +17,8 @@ AS5600 PWM、目标命令解析、手动 EN 点动、PB5 使能与 PB5 门控点
 
 ## 新增上板测试功能
 
+摄像头离线回归：先执行 `python tools/camera.py setup` 安装依赖及模型，再运行 `python tools/camera.py test`。便携 C 传输测试为 `python tools/camera.py test-firmware --clang <主机Clang路径>`，也支持 `--zig`。USB 诊断需要退出预览，并显式执行 `check-usb` 或 `focus`；自动测试不会打开真实设备。固件与软件入口见 [摄像头文档](camera-imx708.md) / [English](camera-imx708.en.md)。
+
 1. 在对应平台的 `examples/` 下建立按功能命名的目录，使用小写英文及下划线。
 2. 按下方模板编写 README，写清硬件、接线、目标与验收方式。
 3. 增加独立入口及构建配置，复用正式程序的驱动、协议与领域模块。不要复制驱动，也不要直接引用正式产品入口。

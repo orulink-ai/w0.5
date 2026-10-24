@@ -1,0 +1,8 @@
+opencv-python==4.11.0.86
+supervision==0.25.0
+numpy==2.2.6
+Pillow==11.3.0
+scipy==1.15.3
+matplotlib==3.10.3
+pyserial==3.5
+av==16.1.0

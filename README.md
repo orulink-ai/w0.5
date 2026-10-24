@@ -38,3 +38,17 @@ docs/                  # 架构、测试及硬件验证说明
 测试功能放置与新增方法见 [测试说明](docs/testing.md)。[AS5600 PWM 示例](firmware/stm32/examples/encoder_read/README.md)采用 STM32duino + PlatformIO + SimpleFOC，其他示例仍为文档骨架。
 
 详见 [架构说明](docs/architecture.md) 与 [硬件验证清单](docs/bringup.md)。
+
+## 摄像头模块 / Camera module
+
+新增独立 ESP32-P4 + IMX708 USB 视频与电脑端 YuNet / ByteTrack 追踪调试版本。它不控制现有电机，画质与持续帧率仍待验收。
+
+```powershell
+python tools/camera.py setup
+python tools/camera.py dev --port COM15
+python tools/camera.py test
+```
+
+中文：[软件运行](tools/camera_facetrack/README.md)、[固件构建与接线](firmware/esp32/examples/imx708_usb/README.md)、[协议与验证](docs/camera-imx708.md)。
+
+English: [desktop setup](tools/camera_facetrack/README.en.md), [firmware and wiring](firmware/esp32/examples/imx708_usb/README.en.md), [protocol and validation](docs/camera-imx708.en.md). The camera example is independent of motion control; image quality and sustained FPS remain under validation.
