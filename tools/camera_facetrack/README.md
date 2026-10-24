@@ -6,7 +6,7 @@
 
 使用相邻 vi-agent 的 `packages/vi-agent/scripts/setup-local-cascade.ps1` 安装 SenseVoiceSmall INT8、Ollama Qwen3 4B Q4_K_M 和中文 VITS，然后运行本目录 `setup.ps1` 准备摄像头。复制 `robot-console.cascade.example.json` 到 `runtime/robot-console/config.json` 后执行 `robot-console.ps1 -Action Start`。完整部署与验证说明在 vi-agent 的 `packages/vi-agent/docs/local-cascade-deployment.zh-CN.md`。
 
-`pipeline=local-cascade` 必须启用 `features.workbench=true`；启动模型、工作台 API、设备和网页，所有服务必需。网页统一显示中文识别、助手回复、Pi 任务、长期记忆和延迟；不显示浏览器云语音连接按钮。Pi 用本机 Ollama，记忆落盘到 vi-agent `.local-cascade/workbench`。保留人脸单轮触发和在场连续两种模式、离场取消、摄像头持续预览、音量固定 80。判停静音改为 450ms，CPU 人脸推理限制为 1 线程，避免与 ASR/TTS 争抢。输入识别与每段合成仍为离线推理，不能保证全链路亚秒。
+`pipeline=local-cascade` 必须启用 `features.workbench=true`；启动模型、工作台 API、设备和网页，所有服务必需。网页统一显示中文识别、助手回复、Pi 任务、长期记忆和延迟；不显示浏览器云语音连接按钮。Pi 用本机 Ollama，记忆落盘到 vi-agent `.local-cascade/workbench`。保留人脸单轮触发和在场连续两种模式、离场取消、摄像头持续预览、音量固定 80。辅助关闭时音频静音 450ms 判停，CPU 人脸推理限制为 1 线程，避免与 ASR/TTS 争抢。SenseVoice 采用滚动分段离线识别，每段 TTS 仍为离线推理，不能保证全链路亚秒。
 
 本链路由 `voice_session.py` 选择 `board-cascade-main.ts`，与原生入口共用音频 broker。下文 LLaMA-Omni2 原生模式为保留的独立入口，其“不接工作台记忆/Pi”的限制不适用于 local-cascade。固件须实际返回 `AUDIO_READY rate=24000 volume=80`；若板上仍为 volume=60 等旧测试固件，必须更新配套应用，不能只改网页标签。
 
@@ -20,9 +20,21 @@
 
 执行 `pwsh -File setup-mouth.ps1` 创建独立 `.venv-mouth`，安装锁定的 MediaPipe Face Landmarker 1.1.1 及摄像头依赖，下载约 3.76MB 的官方 float16 v1 模型并校验 SHA256。然后把私有 `runtime/robot-console/config.json` 的 `cameraPython` 改成 `.venv-mouth/Scripts/python.exe`，执行 `robot-console.ps1 -Action Restart`，在统一网页勾选「嘴型辅助判停（实验）」。原 `.venv` 不需修改，固件和音量 80 不变。
 
-开关默认关闭，保存为 `runtime/view-settings.json` 的 `mouth_assist`。开启后结合声音与目标嘴部动作：可见嘴静止时抑制噪声启动，已检测到至少 200ms 同时有声音与嘴部动作后，嘴部无动作约 900ms 可结束有背景声的一轮；普通静音仍使用 450ms。画面过期超过 500ms、目标丢失或模型不可用时退回音频。切换选项取消当前会话。`configure.mouthAssist` 只接受布尔值；`voice.mouth` 返回启用、可用、活动、目标和原因元数据，通过子进程 stdin 接入，不发送图像或关键点给语音进程。
+开关默认关闭，保存为 `runtime/view-settings.json` 的 `mouth_assist`。开启后可见嘴静止时抑制噪声启动；开口前以静止嘴部的音频校准背景，进入讲话后冻结校准并降低延续门限，保留轻声字词。只有声音低于延续门限且嘴部持续静止都达到 600ms 才提交，有声音或嘴部活动就继续等；嘴部静止不能单独结束一轮。画面过期超过 500ms、目标丢失或模型不可用时，等待失效与音频安静都持续 1000ms 再回退提交。它不识别语义完成，超过 600ms 的共同静止仍可能分轮。切换选项取消当前会话。`configure.mouthAssist` 只接受布尔值；`voice.mouth` 返回启用、可用、活动、目标和原因元数据，通过子进程 stdin 接入，不发送图像或关键点给语音进程。
+
+麦克风整轮取消按 15 秒强制提交的限制：讲话中按 12 秒窗口、500ms 重叠异步调用 SenseVoice，后续约每 11.5 秒识别一块；只取出音频，不重置 VAD。确定说完后识别尾块、去重合并转写，再一次性交给 LLM。此为分段增量识别，不是原生逐帧流式模型。ASR 单请求仍最多 15 秒；积压三个未完成块、30 秒请求超时、识别失败或转写超过既有 16000 字符限制会明确停止，不丢字后拿半句话回复。Qwen 上下文仍为 8192 tokens，不能承诺无限长讲述全部进入上下文。控制台「提交依据」显示联合/纯音频/失效回退；ASR 延迟为判停后的收尾等待。以下原生 LLaMA-Omni2 小节的 15 秒限制仍只用于原生路径。
 
 嘴部推理在主机独立线程约 10 FPS，沿用现有摄像头，选择后锁定最大人脸 ID；目标丢失不自动切给旁观者，所有人脸离场 2 秒后才能重新选择。摄像头重连或旋转清空旧目标。此版本检测开合变化，不能做唇读或消除 ASR 背景噪声；笑、打哈欠、咀嚼、侧脸和遮挡仍可能误判。部署细节、自动化和真实模型验证见相邻 vi-agent 的本地级联文档与验收报告；活动现场效果尚未验收。
+
+画面内会显示嘴部轮廓与角框，以及醒目的状态角标：活动为绿色，静止为青色，等待或失效为黄色。静止不等于闭嘴，也不代表已经说完；这一轮仅增强显示，检测阈值和判停逻辑不变。轮廓随镜像/旋转变换，超过 250ms、目标丢失或画面尺寸改变即停止绘制；几何点只在本机内存用于预览，不写入状态或语音进程。窄屏预览增至 240px 高。只看嘴型时保持自动对话关闭，勾选嘴型辅助即可，不需要打开麦克风。
+
+### 语音预热与提前收音（local-cascade）
+
+开启人脸对话后，摄像头连接新鲜时先准备一个待命语音进程与音频通道；人脸稳定后复用它，避免触发时再启动。连续模式同一进程逐轮收音，单轮模式仍只回复一次；一次在场会话结束后再准备下一进程。默认仍只在人脸确认后开麦。
+
+可选「提前收音」在待命时也收音，仅在内存循环保留 1.5 秒；确认人脸后只提交本次入镜之后的新鲜片段，确认前不调用识别。关闭对话、停止/断开摄像头、切换设置会释放待命进程和缓存；提前收音期间显示「未送识别」，视频可能降到约 14 FPS。SenseVoice 仍为整句识别。
+
+固件输入增益为 30dB，网页还可设 0–12dB 的额外主机输入增益（默认 0），峰值较高时限制放大；它不降噪，也不提高信噪比。网页电平改为对数刻度，并显示原始/放大后 RMS、有效增益和实际门限；喇叭保持 80。HTTP `configure.prelisten` 只收布尔值，`configure.inputGainDb` 只收 0–12 整数；保存到忽略的 `runtime/view-settings.json`，改设置先取消旧会话。部署与限制见相邻 vi-agent 的本地级联说明。
 
 ### 基础摄像头环境
 

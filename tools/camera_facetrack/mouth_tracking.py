@@ -9,11 +9,15 @@ import time
 import urllib.request
 
 import cv2
+import numpy as np
 
 
 MODEL = Path(__file__).parent / 'models' / 'face_landmarker.task'
 MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
 MODEL_SHA256 = '64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff'
+# Ordered outer lip loop from MediaPipe's FACE_LANDMARKS_LIPS connections.
+LIP_OUTLINE = (61, 146, 91, 181, 84, 17, 314, 405, 321, 375,
+               291, 409, 270, 269, 267, 0, 37, 39, 40, 185)
 
 
 def download_model(path=MODEL):
@@ -74,6 +78,7 @@ class MouthTracker:
         self.enabled = False
         self.generation = 0
         self.state = self._empty(False)
+        self.overlay = None
         self.frames = queue.Queue(maxsize=1)
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self._work, daemon=True, name='mouth-landmarks')
@@ -90,6 +95,7 @@ class MouthTracker:
                 self.enabled = enabled
                 self.generation += 1
                 self.state = self._empty(enabled, '等待嘴部画面' if enabled else '已关闭')
+                self.overlay = None
 
     def snapshot(self):
         with self.lock:
@@ -103,6 +109,33 @@ class MouthTracker:
         with self.lock:
             self.generation += 1
             self.state = self._empty(self.enabled, '等待新嘴部画面' if self.enabled else '已关闭')
+            self.overlay = None
+
+    def annotate(self, frame, tracked):
+        """Draw only transient local display geometry; never alter model input or VAD state."""
+        image = frame.copy()
+        with self.lock:
+            value, overlay = self.state.copy(), self.overlay
+        if (not value['enabled'] or not value['available'] or overlay is None
+                or not 0 <= time.time() * 1000 - value['observedAt'] <= 250
+                or value['targetId'] not in tracked.tracker_id
+                or overlay[0] != frame.shape[:2]):
+            return image
+        points = np.rint(overlay[1]).astype(np.int32)
+        if (len(points) < 3 or (points < 0).any()
+                or (points[:, 0] >= frame.shape[1]).any() or (points[:, 1] >= frame.shape[0]).any()):
+            return image
+        color = (100, 240, 100) if value['moving'] else (255, 210, 70)
+        cv2.polylines(image, [points], True, (10, 25, 20), 6, cv2.LINE_AA)
+        cv2.polylines(image, [points], True, color, 2, cv2.LINE_AA)
+        x, y, width, height = cv2.boundingRect(points)
+        pad, corner = 7, 7
+        for cx, cy, dx, dy in ((x-pad, y-pad, 1, 1), (x+width+pad, y-pad, -1, 1),
+                               (x-pad, y+height+pad, 1, -1), (x+width+pad, y+height+pad, -1, -1)):
+            for end in ((cx + dx*corner, cy), (cx, cy + dy*corner)):
+                cv2.line(image, (cx, cy), end, (10, 25, 20), 5, cv2.LINE_AA)
+                cv2.line(image, (cx, cy), end, color, 2, cv2.LINE_AA)
+        return image
 
     def submit(self, frame, tracked, captured_at):
         with self.lock:
@@ -145,6 +178,7 @@ class MouthTracker:
                 if failed:
                     continue
                 value = self._empty(True)
+                overlay = None
                 try:
                     if landmarker is None:
                         mp = importlib.import_module('mediapipe')
@@ -165,8 +199,10 @@ class MouthTracker:
                         x1, y1, x2, y2 = (int(v) for v in box)
                         height, width = frame.shape[:2]
                         pad = int(max(x2-x1, y2-y1) * .15)
-                        crop = frame[max(0, y1-pad):min(height, y2+pad), max(0, x1-pad):min(width, x2+pad)]
+                        crop_x, crop_y = max(0, x1-pad), max(0, y1-pad)
+                        crop = frame[crop_y:min(height, y2+pad), crop_x:min(width, x2+pad)]
                         if min(crop.shape[:2]) >= 80:
+                            crop_height, crop_width = crop.shape[:2]
                             crop = cv2.resize(crop, (256, 256))
                             begin = time.perf_counter()
                             result = landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB,
@@ -184,6 +220,9 @@ class MouthTracker:
                                     moving = motion.update(aperture, now)
                                     value.update(available=True, moving=moving, lastMotionAt=motion.last_motion,
                                                  reason='嘴部活动中' if moving else '嘴部静止')
+                                    overlay = (frame.shape[:2], tuple(
+                                        (crop_x + points[i].x * crop_width, crop_y + points[i].y * crop_height)
+                                        for i in LIP_OUTLINE))
                                 else:
                                     motion = MouthMotion()
                             else:
@@ -196,6 +235,7 @@ class MouthTracker:
                 with self.lock:
                     if generation == self.generation and self.enabled:
                         self.state = value
+                        self.overlay = overlay
                 # Bound optional work to at most 10 FPS without blocking video or audio workers.
                 self.stop.wait(.08)
         finally:

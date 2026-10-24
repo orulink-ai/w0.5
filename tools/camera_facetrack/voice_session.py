@@ -17,7 +17,8 @@ from urllib.parse import urlsplit
 
 
 class VoiceSession:
-    def __init__(self, port, endpoint, on_event, stop_event, broker=None, prompt=None, once=False, mouth_provider=None):
+    def __init__(self, port, endpoint, on_event, stop_event, broker=None, prompt=None, once=False, mouth_provider=None,
+                 activation=None, prelisten=False, input_gain_db=0):
         self.port = port
         self.endpoint = endpoint
         self.on_event = on_event
@@ -26,6 +27,9 @@ class VoiceSession:
         self.prompt = prompt
         self.once = once
         self.mouth_provider = mouth_provider
+        self.activation = activation
+        self.prelisten = prelisten
+        self.input_gain_db = input_gain_db
 
     def run(self):
         url = urlsplit(self.endpoint)
@@ -48,12 +52,15 @@ class VoiceSession:
         if self.broker is None:
             raise RuntimeError('请先连接开发板摄像头，共享音频通道尚未就绪。')
         env.update(VI_BOARD_BROKER_URL=self.broker[0], VI_BOARD_BROKER_TOKEN=self.broker[1])
+        env.update(VI_BOARD_PRELISTEN=str(self.prelisten).lower(), VI_BOARD_INPUT_GAIN_DB=str(self.input_gain_db))
         command = [node, '--env-file-if-exists=.env', '--import', 'tsx', str(entry),
                    '--json-events']
         if self.once or self.prompt is not None:
             command.append('--once')
         if self.prompt is not None:
             command.extend(['--text', self.prompt])
+        if self.activation is not None:
+            command.append('--wait-for-face')
         process = subprocess.Popen(command, cwd=root, env=env, stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                    text=True, encoding='utf-8', errors='replace', bufsize=1,
@@ -85,11 +92,17 @@ class VoiceSession:
         error = None
         deadline = time.monotonic() + 180
         next_mouth = 0
+        activated = False
         try:
             self.on_event('state', '正在启动 vi-agent · 检查本地语音模型…')
             while True:
                 if self.stop_event.is_set():
                     break
+                if self.activation is not None and self.activation[0].is_set() and not activated:
+                    process.stdin.write(json.dumps({'type': 'activate', 'since': self.activation[1]['since']}) + '\n')
+                    process.stdin.flush()
+                    activated = True
+                    deadline = time.monotonic() + 45
                 if pipeline == 'local-cascade' and self.mouth_provider is not None and time.monotonic() >= next_mouth:
                     next_mouth = time.monotonic() + .1
                     observation = self.mouth_provider()
@@ -117,8 +130,10 @@ class VoiceSession:
                 if not isinstance(event, dict):
                     continue
                 kind, text = event.get('type'), event.get('text')
-                if kind in ('state', 'text', 'error', 'user-text', 'latency') and isinstance(text, str):
+                if kind in ('state', 'text', 'error', 'user-text', 'latency', 'input', 'prepared') and isinstance(text, str):
                     self.on_event(kind, text)
+                    if kind == 'prepared' and not activated:
+                        deadline = float('inf')
                     if kind == 'error':
                         error = error or text
                 elif kind == 'turn-start':

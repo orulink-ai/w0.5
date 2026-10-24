@@ -17,7 +17,7 @@ def validate_command(value):
     action = value.get('action')
     fields = {
         'start': {'volume'}, 'listen': {'volume'}, 'cancel': set(),
-        'configure': {'faceTrigger', 'enabled', 'volume', 'mode', 'mouthAssist'},
+        'configure': {'faceTrigger', 'enabled', 'volume', 'mode', 'mouthAssist', 'prelisten', 'inputGainDb'},
         'camera-start': set(), 'camera-stop': set(),
         'test-speaker': set(),
         'rotate': {'turns'}, 'mirror': {'enabled'},
@@ -28,9 +28,11 @@ def validate_command(value):
         raise ValueError('未知命令字段')
     if 'volume' in value and (type(value['volume']) is not int or value['volume'] != 80):
         raise ValueError('开发板音量固定为 80')
-    for field in ('faceTrigger', 'enabled', 'mouthAssist'):
+    for field in ('faceTrigger', 'enabled', 'mouthAssist', 'prelisten'):
         if field in value and type(value[field]) is not bool:
             raise ValueError(field + ' 必须为布尔值')
+    if 'inputGainDb' in value and (type(value['inputGainDb']) is not int or not 0 <= value['inputGainDb'] <= 12):
+        raise ValueError('inputGainDb 必须为 0 到 12 的整数')
     if value.get('faceTrigger') is False:
         raise ValueError('麦克风必须在人脸稳定后触发，不能关闭人脸门控')
     if 'mode' in value and value['mode'] not in ('single', 'continuous'):

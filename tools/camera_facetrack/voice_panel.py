@@ -15,6 +15,12 @@ from voice_session import VoiceSession
 class VoicePanel:
     def __init__(self, parent, request_turn, change_mode=None, mouth_provider=None):
         self.mouth_provider = mouth_provider
+        self.prepared = None
+        self.prewarm_ready = False
+        self.prelisten = False
+        self.input_gain_db = 0
+        self.input_state = {}
+        self.face_since = None
         self.events = queue.Queue()
         self.worker = None
         self.stop_event = threading.Event()
@@ -91,6 +97,45 @@ class VoicePanel:
     def busy(self):
         return self.in_turn
 
+    @property
+    def prewarm_running(self):
+        slot = getattr(self, 'prepared', None)
+        return slot is not None and slot['thread'].is_alive()
+
+    def prepare(self, port, broker):
+        """One disposable standby slot, adopted by the next face-gated encounter."""
+        slot = getattr(self, 'prepared', None)
+        if (not self.enabled.get() or broker is None or os.environ.get('VI_VOICE_PROVIDER') != 'local-cascade'):
+            if slot is not None:
+                slot['stop'].set()
+            return
+        if self.busy or slot is not None:
+            return
+        events, stop = queue.Queue(maxsize=256), threading.Event()
+        activation = (threading.Event(), {})
+        endpoint = self.endpoint.get().strip()
+        mouth_provider = self.mouth_provider
+        once = self.mode == 'single'
+        prelisten = getattr(self, 'prelisten', False)
+        gain = getattr(self, 'input_gain_db', 0)
+
+        def work():
+            try:
+                VoiceSession(port, endpoint, lambda kind, text: events.put((kind, text)), stop,
+                             broker=broker, once=once, mouth_provider=mouth_provider,
+                             activation=activation, prelisten=prelisten, input_gain_db=gain).run()
+            except Exception as exc:
+                events.put(('error', str(exc)))
+            finally:
+                events.put(('done', ''))
+
+        thread = threading.Thread(target=work, daemon=True)
+        self.prepared = dict(port=port, broker=broker, thread=thread, stop=stop,
+                             events=events, activation=activation)
+        self.prewarm_ready = False
+        self.status.set('正在提前准备语音 · 等待人脸')
+        thread.start()
+
     def set_mode(self, mode):
         if mode not in ('single', 'continuous'):
             raise ValueError('未知对话模式')
@@ -136,6 +181,17 @@ class VoicePanel:
         self.reply_complete = False
         self.phase = 'starting'
         self.stop_event = threading.Event()
+        slot = getattr(self, 'prepared', None)
+        if (prompt is None and slot is not None and slot['port'] == port and slot['broker'] == broker
+                and slot['thread'].is_alive() and not slot['stop'].is_set()):
+            self.pending = None
+            self.events, self.worker, self.stop_event = slot['events'], slot['thread'], slot['stop']
+            self.prepared = None
+            slot['activation'][1]['since'] = self.face_since if self.face_since is not None else time.time() * 1000
+            slot['activation'][0].set()
+        elif slot is not None:
+            # A speaker test or configuration transition must first release the broker.
+            slot['stop'].set()
         self.status.set('正在连接 vi-agent · 摄像头持续预览')
         self.reply.set('等待本轮 AI 回复')
         self.once_button.configure(state='disabled')
@@ -144,6 +200,11 @@ class VoicePanel:
         return True
 
     def cancel(self, reason='收到停止指令'):
+        slot = getattr(self, 'prepared', None)
+        if slot is not None:
+            slot['stop'].set()
+        self.prewarm_ready = False
+        self.input_state = {}
         self.stop_event.set()
         if self.pending is not None:
             self.pending = None
@@ -156,10 +217,33 @@ class VoicePanel:
 
     def poll(self, camera_alive):
         """Called by Tk; the camera remains the sole UART owner during speech."""
+        slot = getattr(self, 'prepared', None)
+        if slot is not None:
+            if not camera_alive:
+                slot['stop'].set()
+            while True:
+                try:
+                    kind, text = slot['events'].get_nowait()
+                except queue.Empty:
+                    break
+                if kind == 'prepared' and not slot['stop'].is_set():
+                    self.prewarm_ready = True
+                    self.status.set(text)
+                elif kind == 'input':
+                    self.read_input(text)
+                elif kind == 'error' and not slot['stop'].is_set():
+                    self.error = str(text)
+                    self.phase = 'error'
+                    self.status.set('语音准备失败：' + str(text))
+                    self.enabled.set(False)
+                    slot['stop'].set()
+            if not slot['thread'].is_alive():
+                self.prepared = None
+                self.prewarm_ready = False
         if self.in_turn and not camera_alive and not self.stop_event.is_set():
             self.stop_event.set()
             self.events.put(('error', '开发板摄像头连接中断，语音已取消；正在等待设备重连。'))
-        if self.pending is not None and not self.stop_event.is_set():
+        if self.pending is not None and not self.stop_event.is_set() and getattr(self, 'prepared', None) is None:
             port, endpoint, broker, prompt, once = self.pending
             self.pending = None
             events, stop = self.events, self.stop_event
@@ -167,6 +251,7 @@ class VoicePanel:
             def work():
                 try:
                     extras = {'mouth_provider': self.mouth_provider} if self.mouth_provider is not None else {}
+                    extras['input_gain_db'] = getattr(self, 'input_gain_db', 0)
                     VoiceSession(port, endpoint, lambda kind, text: events.put((kind, text)), stop,
                                  broker=broker, prompt=prompt, once=once, **extras).run()
                 except Exception as exc:
@@ -176,7 +261,7 @@ class VoicePanel:
 
             self.worker = threading.Thread(target=work, daemon=True)
             self.worker.start()
-        elif self.pending is not None:
+        elif self.pending is not None and self.stop_event.is_set():
             self.pending = None
             self.events.put(('done', 'cancelled'))
         completed = None
@@ -185,7 +270,11 @@ class VoicePanel:
                 kind, text = self.events.get_nowait()
             except queue.Empty:
                 break
-            if kind == 'user-text':
+            if kind == 'input':
+                self.read_input(text)
+            elif kind == 'prepared':
+                self.prewarm_ready = True
+            elif kind == 'user-text':
                 self.user_text = str(text)[:2000]
             elif kind == 'latency':
                 try:
@@ -249,3 +338,11 @@ class VoicePanel:
                     self.status.set('本轮完成 · 摄像头继续预览 · 等待人脸开启下一轮')
             self.updated_at = time.time() * 1000
         return completed
+
+    def read_input(self, text):
+        try:
+            value = json.loads(text)
+            if isinstance(value, dict):
+                self.input_state = value
+        except (ValueError, TypeError):
+            pass

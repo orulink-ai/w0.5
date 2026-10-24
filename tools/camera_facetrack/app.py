@@ -232,12 +232,18 @@ class App:
         self.setup_dialog = None
         saved_voice_mode = 'continuous'
         saved_mouth_assist = False
+        saved_prelisten = False
+        saved_input_gain = 0
         try:
             saved_view = json.loads((Path(__file__).parent / 'runtime' / 'view-settings.json').read_text(encoding='utf-8'))
             self.view.turns = int(saved_view.get('turns', 0)) % 4
             if saved_view.get('voice_mode') in ('single', 'continuous'):
                 saved_voice_mode = saved_view['voice_mode']
             saved_mouth_assist = saved_view.get('mouth_assist') is True
+            saved_prelisten = saved_view.get('prelisten') is True
+            gain = saved_view.get('input_gain_db', 0)
+            if type(gain) is int and 0 <= gain <= 12:
+                saved_input_gain = gain
         except (OSError, ValueError, TypeError, AttributeError):
             pass
         self.source_files.append(Path(__file__).with_name('camera_setup.py'))
@@ -365,6 +371,8 @@ class App:
         self.preview.bind('<Configure>', lambda event: self.refresh_preview())
         ttk.Label(viewer, textvariable=self.metrics, style='Muted.TLabel', wraplength=720).grid(row=2, column=0, sticky='w', pady=(12, 0))
         self.voice = VoicePanel(viewer, self.request_voice_turn, self.set_voice_mode, self.mouth.snapshot)
+        self.voice.prelisten = saved_prelisten
+        self.voice.input_gain_db = saved_input_gain
         self.mouth_enabled = tk.BooleanVar(value=saved_mouth_assist)
         self.mouth.configure(saved_mouth_assist)
         ttk.Checkbutton(self.voice.frame, text='嘴型辅助判停（实验）', variable=self.mouth_enabled,
@@ -391,7 +399,7 @@ class App:
         if self.last_preview_frame is None:
             return
         frame, tracked, rotation = self.last_preview_frame
-        frame = annotate(frame, tracked, self.mirror.get())
+        frame = annotate(self.mouth.annotate(frame, tracked), tracked, self.mirror.get())
         frame = rotate_frame(frame, self.view.turns - rotation)
         image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         image.thumbnail((max(1, self.preview.winfo_width()), max(1, self.preview.winfo_height())))
@@ -410,7 +418,9 @@ class App:
             path = Path(__file__).parent / 'runtime' / 'view-settings.json'
             path.parent.mkdir(exist_ok=True)
             path.write_text(json.dumps({'turns': self.view.turns, 'voice_mode': self.voice.mode,
-                                        'mouth_assist': self.mouth.snapshot()['enabled']}), encoding='utf-8')
+                                        'mouth_assist': self.mouth.snapshot()['enabled'],
+                                        'prelisten': self.voice.prelisten,
+                                        'input_gain_db': self.voice.input_gain_db}), encoding='utf-8')
         except OSError:
             pass
 
@@ -509,6 +519,8 @@ class App:
                 self.voice.toggle()
                 self.voice.status.set('等待人脸稳定 1 秒 · 麦克风关闭')
                 return
+        if prompt is None:
+            self.voice.face_since = time.time() * 1000 - min(1500, (now - self.face_gate.present_since) * 1000)
         accepted = (self.voice.request(port, broker, prompt=prompt) if prompt is not None
                     else self.voice.request(port, broker))
         if accepted:
@@ -562,6 +574,15 @@ class App:
                 self.voice.toggle()
             elif action == 'configure':
                 self.voice.face_trigger.set(True)
+                if 'prelisten' in command or 'inputGainDb' in command:
+                    self.voice.cancel(reason='收音设置已切换')
+                    self.voice.prelisten = command.get('prelisten', self.voice.prelisten)
+                    self.voice.input_gain_db = command.get('inputGainDb', self.voice.input_gain_db)
+                    self.voice_mode_changed = self.voice.busy
+                    self.face_gate.suspend()
+                    self.face_gate.armed = True
+                    self.voice_ready_at = time.monotonic() + 1.5
+                    self.save_view_settings()
                 if 'mouthAssist' in command:
                     self.set_mouth_assist(command['mouthAssist'])
                 if 'mode' in command:
@@ -597,6 +618,8 @@ class App:
         self.next_robot_publish = now + .2
         active = self.worker is not None and self.worker.is_alive() and not self.stop_event.is_set()
         fresh = bool(active and self.last_frame_at and now - self.last_frame_at < 1)
+        input_state = getattr(self.voice, 'input_state', {})
+        input_fresh = fresh and self.voice.enabled.get() and 0 <= time.time() * 1000 - input_state.get('observedAt', 0) < 500
         self.robot_revision += 1
         status = {'revision': self.robot_revision,
                   'connected': bool(active and get_audio_broker(self.camera.get().removeprefix('serial://').upper())),
@@ -617,6 +640,11 @@ class App:
                             'micPackets': self.transport_stats.get('mic_packets', 0),
                             'micPeak': (self.transport_stats.get('mic_peak', 0)
                                         if self.voice.phase == 'listening' else 0),
+                            'prewarmReady': self.voice.prewarm_ready,
+                            'prelisten': self.voice.prelisten,
+                            'prelistening': bool(input_fresh and input_state.get('prelistening') and self.voice.prewarm_running),
+                            'inputGainDb': self.voice.input_gain_db,
+                            'input': input_state if input_fresh else None,
                             'micSequenceGaps': self.transport_stats.get('mic_sequence_gaps', 0),
                             'micErrors': self.transport_stats.get('mic_errors', 0),
                             'cancelReason': self.voice.cancel_reason,
@@ -632,7 +660,8 @@ class App:
         if fresh and self.last_preview_frame is not None and now >= self.next_robot_jpeg:
             self.next_robot_jpeg = now + .125
             frame, tracked, rotation = self.last_preview_frame
-            image = rotate_frame(annotate(frame, tracked, self.mirror.get()), self.view.turns - rotation)
+            image = rotate_frame(annotate(self.mouth.annotate(frame, tracked), tracked, self.mirror.get()),
+                                 self.view.turns - rotation)
             height, width = image.shape[:2]
             if width > 960:
                 image = cv2.resize(image, (960, max(1, round(height * 960 / width))))
@@ -657,6 +686,12 @@ class App:
                 self.status.set('源码已更新，正在释放摄像头并重新加载…')
         camera_alive = self.worker is not None and self.worker.is_alive()
         completed = self.voice.poll(camera_alive)
+        prewarm_source = self.camera.get().strip()
+        prewarm_fresh = (camera_alive and not self.stop_event.is_set() and self.last_frame_at
+                         and time.monotonic() - self.last_frame_at < 1 and not self.closing)
+        self.voice.prepare(prewarm_source.removeprefix('serial://').upper(),
+                           get_audio_broker(prewarm_source.removeprefix('serial://').upper())
+                           if prewarm_fresh and prewarm_source.startswith('serial://') else None)
         if completed and not self.closing:
             self.voice_ready_at = time.monotonic() + 1.5
             if self.voice.mode == 'continuous' or self.voice_mode_changed:
@@ -675,7 +710,7 @@ class App:
                 self.manual_voice_pending = False
                 self.request_voice_turn(prompt=self.manual_voice_prompt)
                 self.manual_voice_prompt = None
-        if self.closing and not camera_alive and not self.voice.busy:
+        if self.closing and not camera_alive and not self.voice.busy and not self.voice.prewarm_running:
             self.restart_settings = [self.camera.get(), self.width.get(), self.activation.get(),
                                      self.buffer.get(), 'yes' if self.mirror.get() else 'no']
             self.robot_server.close()
