@@ -13,8 +13,8 @@
     const pending = busy || control?.settling || control?.command?.status === "pending";
     const ready = supportedVersion && available && control.state === "READY" && control.calibrated === true && control.enabled === false && sensorValid && !pending;
     return {
-      visible: Boolean(control?.supported),
-      label: !available ? "等待闭环固件" : !supportedVersion ? "旧版协议 · 仅诊断" :
+      visible: Boolean(control?.supported || state?.encoder_mode === "dual_diagnostic"),
+      label: state?.encoder_mode === "dual_diagnostic" ? "只读诊断 · 控制暂不可用" : !available ? "等待闭环固件" : !supportedVersion ? "旧版协议 · 仅诊断" :
         control.state === "RUNNING" && !(control.calibrated && control.sensor_valid && control.enabled) ? "运行反馈异常" :
         control.state === "READY" && !control.calibrated ? "未确认校准" : (STATES[control.state] || "状态未知"),
       ready,
@@ -33,7 +33,8 @@
   }
 
   class ClosedLoopPanel {
-    constructor(element, {send, onState, heartbeat = runId => DashboardAPI.post("/api/foc/heartbeat", {run_id: runId})}) {
+    constructor(element, {send, onState, heartbeat = runId => DashboardAPI.post("/api/foc/heartbeat", {run_id: runId}),
+      title='闭环运动工作台', description='AS5600 参与换相反馈 · 电压模式 · 页面连接有效时持续保持'}) {
       this.element = element;
       this.send = send;
       this.onState = onState;
@@ -55,8 +56,8 @@
         this.lease.clear(); this.livePosition.clear();
       });
       element.innerHTML = `
-        <div class="target-heading"><div><div class="section-label">闭环运动工作台</div>
-          <p>AS5600 参与换相反馈 · 电压模式 · 页面连接有效时持续保持</p></div>
+        <div class="target-heading"><div><div class="section-label" data-field="title"></div>
+          <p data-field="description"></p></div>
           <span class="motor-badge" data-field="badge">等待闭环固件</span></div>
         <div class="cl-readouts" aria-live="polite">
           <div><span>相对位置</span><strong data-field="position">—</strong></div>
@@ -100,6 +101,8 @@
         <p data-field="status" class="target-status" role="status" aria-live="polite">等待设备报告闭环状态。</p>
         <p data-field="error" class="error" role="alert" hidden></p>
         <p class="target-note">命令确认仅代表芯片接收；实际运行、校准完成和故障以实时状态为准。页面关闭或通信中断后，芯片将在 1.5 秒内关闭使能；停止、复位或重连后不自动重启。速度修改需先停止，再手动启动；位置目标可在支持实时拖动的固件中直接更新。</p>`;
+      this.field('title').textContent=title;
+      this.field('description').textContent=description;
       this.mode = "position";
       for (const button of element.querySelectorAll("[data-mode]")) button.addEventListener("click", () => this.selectMode(button.dataset.mode));
       for (const button of element.querySelectorAll("[data-preset]")) button.addEventListener("click", () => {
@@ -232,6 +235,7 @@
       this.field("limits").textContent = `固件确认的范围：${format(control?.soft_min_deg, "°")} ～ ${format(control?.soft_max_deg, "°")}`;
       let status = "等待设备报告闭环状态。";
       if (!state?.connected) status = "串口未连接，不能确认电机状态。";
+      else if (state?.encoder_mode === "dual_diagnostic") status = "原单路位置、速度和拖动控制已保留。当前为双编码器只读诊断固件，不执行运动；恢复闭环固件后按原流程校准、启动。";
       else if (model.busy) status = "命令已发送，等待芯片确认；尚不能据此判断动作完成。";
       else if (!control?.available) status = "闭环状态已超时，禁止启动；可尝试立即停止。";
       else if (![3, 4].includes(control.protocol_version)) status = "当前是旧版闭环固件，仅显示诊断；请升级 v3 后使用持续控制。";

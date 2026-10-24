@@ -139,5 +139,25 @@ int main() {
   require(!decode(precise.sample(), 100).valid, "raw overcapture rejected");
   precise.frame(4000, 8000, 100, true, false, 0);
   require(!decode(precise.sample(), 100).valid, "zero counter rate rejected");
-  std::cout << "PASS: AS5600 PWM decoding, edge capture, timeout and rollover\n";
+  // Two physical inputs have independent capture state and timer units. TIM4
+  // uses 4 MHz so its 16-bit period also fits the slowest 115 Hz PWM setting.
+  TimerCapture input_a, input_b;
+  const uint32_t ticks_a = 17400, ticks_b = 34784;
+  const uint32_t high_a = std::lround((128.0 + 1024) * ticks_a / 4351);
+  const uint32_t high_b = std::lround((128.0 + 3072) * ticks_b / 4351);
+  for (uint32_t stamp : {100U, 200U}) {
+    input_a.frame(high_a, ticks_a, stamp, true, false, 8000000);
+    input_b.frame(high_b, ticks_b, stamp, true, false, 4000000);
+  }
+  near(toDegrees(decode(input_a.sample(), 201).angle_rad), 90, .05,
+       "first channel uses its own 8 MHz capture");
+  near(toDegrees(decode(input_b.sample(), 201).angle_rad), 270, .05,
+       "second channel uses its own 4 MHz capture");
+  require(ticks_b <= 65535, "115 Hz input fits the 16 bit secondary timer");
+  require(!decode(input_a.sample(), 7000).valid && decode(input_b.sample(), 7000).valid,
+          "channel timeouts use each input's independent period");
+  input_b.frame(high_b, ticks_b, 300, true, true, 4000000);
+  require(!decode(input_b.sample(), 301).valid && decode(input_a.sample(), 301).valid,
+          "secondary overcapture never invalidates the primary input");
+  std::cout << "PASS: AS5600 PWM decoding, independent inputs, timeout and rollover\n";
 }

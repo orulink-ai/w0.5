@@ -1,0 +1,15 @@
+"use strict";
+const assert = require('node:assert/strict');
+const {models} = require('../encoder_dashboard/static/components/encoder-readouts.js');
+const valid = angle => ({signal:'valid',reading:{angle_deg:angle,frequency_hz:460,high_us:700,period_us:2174},samples:3,valid_samples:3,age_ms:5});
+let cards=models({connected:true,signal:'valid',reading:{angle_deg:33,frequency_hz:460},samples:2});
+assert.equal(cards[0].angle,'33.00');
+assert.equal(cards[1].angle,'—','legacy sample is never copied to encoder 2');
+cards=models({connected:true,encoders:[{id:1,...valid(10)},{id:2,...valid(200)}]});
+assert.deepEqual(cards.map(x=>x.angle),['10.00','200.00']);
+assert.deepEqual(cards.map(x=>x.pin),['PA0','PB7']);
+cards=models({connected:true,encoders:[{id:1,...valid(10),signal:'stale'},{id:2,...valid(200)}]});
+assert.deepEqual(cards.map(x=>x.angle),['—','200.00']);
+cards=models({connected:false,encoders:[{id:1,...valid(10)},{id:2,...valid(200)}]});
+assert.deepEqual(cards.map(x=>x.angle),['—','—']);
+console.log('Dual encoder readout models passed');

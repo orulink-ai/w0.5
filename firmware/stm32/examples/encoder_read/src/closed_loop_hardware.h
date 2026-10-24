@@ -6,8 +6,31 @@
 #include "pwm_input.h"
 
 namespace closed_hardware {
+struct MotorPins {
+  uint8_t id;
+  uint32_t phase_a,phase_b,phase_c,enable,fault;
+  bool (*capture_begin)();
+  as5600::PwmSample (*capture_snapshot)();
+};
+MotorPins primaryPins();
+MotorPins secondaryPins();
+
+// One physical watchdog owns the board; initialize both drivers before arming
+// its short runtime deadline. Each motor retains its own fault/enable state.
+class BoardWatchdog {
+ public:
+  bool begin();
+  bool arm();
+  void poll();
+ private:
+  bool configure(uint32_t prescaler,uint32_t reload);
+  IWDG_HandleTypeDef handle_{};
+  bool active_=false;
+};
+
 class PwmSensor final : public Sensor {
  public:
+  explicit PwmSensor(as5600::PwmSample (*snapshot)()=pwm_input::snapshot):snapshot_(snapshot){}
   void update() override;
   float getMechanicalAngle() override {return tracker_.mechanical();}
   float getAngle() override {return tracker_.angle();}
@@ -23,17 +46,19 @@ class PwmSensor final : public Sensor {
  protected:
   float getSensorAngle() override {return getMechanicalAngle();}
  private:
+  as5600::PwmSample (*snapshot_)();
   closed_loop::AngleTracker tracker_;
   as5600::PwmSample sample_{};
   as5600::Reading reading_{};
   bool valid_=false;
 };
 
-// Owns PB5 exclusively. Driver intentionally has no EN pin, so SimpleFOC
+// Owns one configured EN exclusively. Driver has no EN pin, so SimpleFOC
 // cannot enable the bridge implicitly during startup or initFOC().
 class MotorHardware {
  public:
-  MotorHardware(): driver_(PA8,PA9,PA10),motor_(7){}
+  explicit MotorHardware(MotorPins pins=primaryPins()): pins_(pins),
+      driver_(pins.phase_a,pins.phase_b,pins.phase_c),motor_(7),sensor_(pins.capture_snapshot){}
   bool begin();
   void poll();
   bool enable();
@@ -44,13 +69,12 @@ class MotorHardware {
   PwmSensor& sensor(){return sensor_;}
   BLDCMotor& motor(){return motor_;}
  private:
-  bool watchdog(uint32_t prescaler,uint32_t reload);
-  bool pinHigh()const{return (GPIOB->IDR&GPIO_IDR_ID5)!=0;}
+  bool pinHigh()const{return digitalRead(pins_.enable)==HIGH;}
+  MotorPins pins_;
   BLDCDriver3PWM driver_;
   BLDCMotor motor_;
   PwmSensor sensor_;
-  IWDG_HandleTypeDef watchdog_{};
-  bool driver_ready_=false,initialized_=false,watchdog_ready_=false,enabled_=false,fault_=false;
+  bool driver_ready_=false,initialized_=false,enabled_=false,fault_=false;
 };
 } // namespace closed_hardware
 #endif

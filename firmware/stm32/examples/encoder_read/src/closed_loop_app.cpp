@@ -11,12 +11,19 @@ const char* modeName(closed_loop::Mode mode) {
   return mode==closed_loop::Mode::Position ? "POSITION" : "VELOCITY";
 }
 }
-void Application::begin() {
-  console_.begin(115200);
-  if(!hardware_.begin()) fail("INIT_FAILED");
-  console_.println("#FOC_INFO,v4 position servo/velocity; live TARGET; 6V; explicit calibration; 1500ms owner lease");
-  console_.println("#FOC_INFO,PB4 nFAULT protects only a physically connected fault wire");
-  console_.println("#FOC_INFO,DEBUG v1: shaft_rad,target_rad,velocity_sp_rad_s,Uq_V,electrical_rad,zero_electrical_rad,direction,measurement_rad_s");
+void Application::begin(bool board_ready) {
+#ifndef DUAL_MOTOR_CONTROL
+  secondary_encoder_.begin();
+#endif
+  if(!hardware_.begin()||!board_ready) fail("INIT_FAILED");
+  if(motor_id_==1) {
+    console_.println("#FOC_INFO,v4 position servo/velocity; live TARGET; 6V; explicit calibration; 1500ms owner lease");
+    console_.println("#FOC_INFO,PB4 nFAULT protects only a physically connected fault wire");
+    console_.println("#FOC_INFO,DEBUG v1: shaft_rad,target_rad,velocity_sp_rad_s,Uq_V,electrical_rad,zero_electrical_rad,direction,measurement_rad_s");
+  } else {
+    console_.println("#FOC2_INFO,v4 independent position/velocity; encoder PB7; PWM TIM3; EN PB12");
+    console_.println("#FOC2_INFO,PB13 nFAULT protects only a physically connected fault wire");
+  }
   report();
 }
 void Application::stop(const char* reason) {
@@ -44,8 +51,12 @@ void Application::expireLease(uint32_t now) {
   }
 }
 void Application::reply(bool accepted,uint32_t id,const char* text) {
-  console_.print(accepted?"#FOC_ACK,":"#FOC_NACK,");
+  if(motor_id_==2)console_.print(accepted?"#FOC2_ACK,":"#FOC2_NACK,");
+  else console_.print(accepted?"#FOC_ACK,":"#FOC_NACK,");
   console_.print(id); console_.print(','); console_.println(text);
+}
+void Application::handle(const closed_protocol::Request& request) {
+  if(request.motor_id==motor_id_)apply(request);
 }
 void Application::apply(const closed_protocol::Request& r) {
   using closed_protocol::Action;
@@ -161,7 +172,7 @@ void Application::apply(const closed_protocol::Request& r) {
 void Application::receive() {
   for(unsigned count=0;count<128&&console_.available();++count) {
     const auto parsed=receiver_.feed(static_cast<char>(console_.read()));
-    if(parsed==closed_protocol::Parse::Ready) { apply(receiver_.request()); return; }
+    if(parsed==closed_protocol::Parse::Ready) { handle(receiver_.request()); return; }
     if(parsed==closed_protocol::Parse::Invalid) { reply(false,0,"MALFORMED"); return; }
   }
 }
@@ -219,7 +230,7 @@ void Application::report() {
   const bool faulted=policy_.faulted()||hardware_.faulted();
   const char* state=faulted?"FAULT":alignment_.active()?"CALIBRATING":
       policy_.running()?"RUNNING":policy_.calibrated()?"READY":"UNCALIBRATED";
-  console_.print("#FOC_STATUS,4,"); console_.print(state); console_.print(',');
+  console_.print(motor_id_==2?"#FOC2_STATUS,4,":"#FOC_STATUS,4,"); console_.print(state); console_.print(',');
   console_.print(policy_.running()?modeName(policy_.mode()):"STOP"); console_.print(',');
   console_.print(high_water_); console_.print(','); console_.print(policy_.calibrated()?1:0); console_.print(',');
   console_.print(hardware_.pinHighReadback()?1:0); console_.print(','); console_.print(hardware_.sensor().valid()?1:0); console_.print(',');
@@ -235,7 +246,7 @@ void Application::report() {
 void Application::debug(bool force) {
   if(!force&&!policy_.running()) return;
   const auto& motor=hardware_.motor();
-  console_.print("#FOC_DEBUG,1,"); console_.print(motor.shaft_angle,6); console_.print(',');
+  console_.print(motor_id_==2?"#FOC2_DEBUG,1,":"#FOC_DEBUG,1,"); console_.print(motor.shaft_angle,6); console_.print(',');
   console_.print(motor.shaft_angle_sp,6); console_.print(','); console_.print(motor.shaft_velocity_sp,6); console_.print(',');
   console_.print(motor.current_sp,6); console_.print(','); console_.print(motor.electrical_angle,6); console_.print(',');
   console_.print(motor.zero_electric_angle,6); console_.print(','); console_.print(static_cast<int>(motor.sensor_direction)); console_.print(',');
@@ -243,7 +254,13 @@ void Application::debug(bool force) {
 }
 void Application::trace(uint32_t now) {
 #ifdef FOC_DEBUG_TRACE
+#ifdef DUAL_MOTOR_CONTROL
+  // Two 10Hz trace streams leave UART bandwidth for two 20Hz target queues,
+  // status, ACKs and heartbeats. Control/capture cadence is unchanged.
+  if(!trace_.due(now,policy_.running(),100))return;
+#else
   if(!trace_.due(now,policy_.running()))return;
+#endif
   const auto& sensor=hardware_.sensor();
   const auto& motor=hardware_.motor();
   const float relative=toDegrees(policy_.relative(hardware_.sensor().getAngle()));
@@ -253,7 +270,11 @@ void Application::trace(uint32_t now) {
       sensor.measurementVelocity()*motor.sensor_direction*60/closed_loop::kTwoPi,
       motor.voltage.q,motor.voltage_limit);
   char line[160];
-  const size_t length=frame.format(line,sizeof(line));
+  size_t length=frame.format(line,sizeof(line));
+  if(length&&motor_id_==2) {
+    if(length+1>=sizeof(line))return;
+    std::memmove(line+5,line+4,length-3);line[4]='2';++length;
+  }
   // Never wait for trace output: protect control/lease/watchdog cadence under
   // transport pressure. The 256-byte TX buffer fits one entire trace record.
   if(length&&console_.availableForWrite()>=static_cast<int>(length)) {
@@ -266,6 +287,7 @@ void Application::trace(uint32_t now) {
 void Application::telemetry() {
   const auto& sensor=hardware_.sensor();
   const auto& sample=sensor.sample();
+  if(motor_id_==2)console_.print("#ENCODER_AUX,1,2,");
   if(sensor.valid()) {
     console_.print("OK,"); console_.print(toDegrees(sensor.reading().angle_rad),2); console_.print(',');
     console_.print(sensor.measurementVelocity(),3); console_.print(','); console_.print(sensor.reading().frequency_hz,1); console_.print(',');
@@ -273,7 +295,10 @@ void Application::telemetry() {
   console_.print(sample.high_us); console_.print(','); console_.println(sample.period_us);
 }
 void Application::tick() {
-  hardware_.poll(); expireLease(millis()); control(); receive();
+  hardware_.poll(); expireLease(millis()); control();
+#ifndef DUAL_MOTOR_CONTROL
+  receive();
+#endif
   hardware_.poll(); expireLease(millis()); control();
   const auto now=millis();
   if(static_cast<uint32_t>(now-telemetry_ms_)>=100) { telemetry_ms_=now; telemetry(); }
@@ -284,6 +309,9 @@ void Application::tick() {
 #endif
   }
   trace(millis());
+#ifndef DUAL_MOTOR_CONTROL
+  secondary_encoder_.tick(console_);
+#endif
 }
 } // namespace closed_application
 #endif

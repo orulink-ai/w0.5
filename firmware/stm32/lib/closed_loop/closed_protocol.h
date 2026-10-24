@@ -14,7 +14,7 @@ inline float zeroDegreesForWire(float raw_radians) {
   return value>=359.9995f?0:value;
 }
 enum class Action { Calibrate,Zero,Stop,Limits,Position,Velocity,Keepalive,Reset,Overspeed,Target };
-struct Request {uint32_t id=0;Action action=Action::Stop;float a=0,b=0;uint32_t run_id=0;};
+struct Request {uint32_t id=0;Action action=Action::Stop;float a=0,b=0;uint32_t run_id=0;uint8_t motor_id=1;};
 enum class Parse {None,Ready,Invalid};
 inline bool number(const char* value,float& result) {
   if(!value||!*value)return false;
@@ -56,10 +56,12 @@ class Receiver {
     for(char* p=line_;*p;++p)if(*p==',') {
       *p='\0';if(count==8)return false;fields[count++]=p+1;
     }
-    if(count<3||std::strcmp(fields[0],"FOC")!=0)return false;
+    if(count<3)return false;
+    const uint8_t motor_id=!std::strcmp(fields[0],"FOC")?1:!std::strcmp(fields[0],"FOC2")?2:0;
+    if(!motor_id)return false;
     uint32_t id=0;
     if(!positiveId(fields[1],id))return false;
-    Request r;r.id=id;
+    Request r;r.id=id;r.motor_id=motor_id;
     if(count==3) {
       if(!std::strcmp(fields[2],"CALIBRATE"))r.action=Action::Calibrate;
       else if(!std::strcmp(fields[2],"ZERO"))r.action=Action::Zero;

@@ -1,5 +1,7 @@
 # STM32 单轴位置与速度控制
 
+本文保留原单路控制基线；双路版本现已实现，新增架构和接线见文末“双路扩展”。
+
 本阶段只交付基础位置伺服、速度闭环和网页持续控制。运行环境为 STM32G431CBT6、STM32duino 2.12.0、SimpleFOC 2.4.0、PlatformIO，固件入口为 `g431_closed_loop`。已确认硬件：12V GB2806（7极对）、DengFOCmini MP6536、AS5600 PWM。当前是单轴调试版本，ESP32与双轴联调另行推进。
 
 ## 组件边界
@@ -101,3 +103,7 @@ python3 tools/stm32.py build --env g431_motor_gpio
 ```
 
 主机测试使用纯策略与伪串口，不控制真实电机。实物版本、运行记录与本阶段边界见 [阶段交付记录](releases/stm32-basic-control.md)。
+
+## 双路扩展
+
+`g431_dual_motor` 为每路分别实例化本文的控制链，第一路原接口保留，第二路通过 `FOC2` / `/api/foc/2` 路由。引脚、共享看门狗边界、独立状态与网页组件说明见 [双路控制](../firmware/stm32/examples/encoder_read/DUAL_MOTOR.md)。

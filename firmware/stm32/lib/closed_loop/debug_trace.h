@@ -41,9 +41,9 @@ class DebugTrace {
   void acceptedTarget(uint32_t id,uint32_t received_ms) {
     last_target_id_=id;target_received_ms_=received_ms;
   }
-  bool due(uint32_t now,bool running) {
+  bool due(uint32_t now,bool running,uint32_t interval_ms=50) {
     if(!running){scheduled_=false;return false;}
-    if(scheduled_&&static_cast<uint32_t>(now-last_emitted_ms_)<50)return false;
+    if(scheduled_&&static_cast<uint32_t>(now-last_emitted_ms_)<interval_ms)return false;
     scheduled_=true;last_emitted_ms_=now;return true;
   }
   TraceFrame frame(uint32_t now,float relative,float requested,float planned,

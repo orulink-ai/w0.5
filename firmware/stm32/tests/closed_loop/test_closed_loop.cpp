@@ -18,6 +18,16 @@ void testProtocol() {
   using closed_protocol::Parse;
   assert(parse("FOC,42,START,POSITION,10,1\n")==Parse::Ready);
   assert(receiver.request().a==10&&receiver.request().b==1);
+  assert(receiver.request().motor_id==1);
+  assert(parse("FOC2,42,START,POSITION,-10,1\n")==Parse::Ready);
+  assert(receiver.request().motor_id==2&&receiver.request().a==-10);
+  assert(parse("FOC2,42,KEEPALIVE\n")==Parse::Ready);
+  assert(receiver.request().motor_id==2);
+  assert(parse("FOC2,43,STOP\n")==Parse::Ready);
+  assert(receiver.request().motor_id==2&&receiver.request().action==closed_protocol::Action::Stop);
+  assert(parse("FOC3,43,STOP\n")==Parse::Invalid);
+  assert(parse("FOC,42,KEEPALIVE\n")==Parse::Ready);
+  assert(receiver.request().motor_id==1);
   assert(parse("FOC,42,KEEPALIVE\n")==Parse::Ready);
   assert(receiver.request().action==closed_protocol::Action::Keepalive);
   assert(parse("FOC,43,RESET\n")==Parse::Ready);
@@ -268,5 +278,9 @@ void testOverspeedSwitch() {
   Policy reboot;assert(reboot.overspeedEnabled()); // No persistent bypass.
 }
 int main() {
+  DebugTrace dualTrace;
+  assert(dualTrace.due(0,true,100));
+  assert(!dualTrace.due(50,true,100));
+  assert(dualTrace.due(100,true,100));
   testProtocol();testFeedback();testLease();testPositionComponents();testPolicy();testSpeedBounds();testRetargetPosition();testDebugTrace();testAlignment();testManualFaultReset();testOverspeedSwitch();
 }

@@ -3,6 +3,7 @@
 #include "closed_loop_hardware.h"
 #include "closed_protocol.h"
 #include "run_lease.h"
+#include "secondary_encoder_monitor.h"
 #ifdef FOC_DEBUG_TRACE
 #include "debug_trace.h"
 #endif
@@ -10,9 +11,12 @@
 namespace closed_application {
 class Application {
  public:
-  explicit Application(HardwareSerial& console):console_(console){}
-  void begin();
+  explicit Application(HardwareSerial& console,closed_hardware::MotorPins pins=closed_hardware::primaryPins())
+      :console_(console),motor_id_(pins.id),hardware_(pins){}
+  void begin(bool board_ready=true);
   void tick();
+  void handle(const closed_protocol::Request& request);
+  void boardFault(){fail("WATCHDOG_INIT_FAILED");}
  private:
   void stop(const char* reason);
   void fail(const char* reason);
@@ -26,6 +30,10 @@ class Application {
   void reply(bool accepted,uint32_t id,const char* text);
   void control();
   HardwareSerial& console_;
+  uint8_t motor_id_;
+#ifndef DUAL_MOTOR_CONTROL
+  SecondaryEncoderMonitor secondary_encoder_;
+#endif
   closed_hardware::MotorHardware hardware_;
   closed_loop::Policy policy_;
   closed_loop::Alignment alignment_;

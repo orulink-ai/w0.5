@@ -13,6 +13,8 @@
   <script src="/components/lease-keeper.js" defer></script>
   <script src="/components/live-position.js" defer></script>
   <script src="/components/closed-loop.js" defer></script>
+  <script src="/components/encoder-readouts.js" defer></script>
+  <script src="/components/motor-workbench.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -37,7 +39,7 @@
         <button id="disconnect" class="secondary" disabled>断开连接</button>
         <p id="error" class="error" role="alert" hidden></p>
         <div class="connection-info"><span>当前设备</span><strong id="active-port">—</strong><span>最近数据</span><strong id="sample-age">—</strong></div>
-        <div class="wiring"><div class="eyebrow">接线速查</div><div><span>编码器 OUT / PWM</span><strong>PA0</strong></div><div><span>TTL RXD</span><strong>PA2 / TX</strong></div><div><span>TTL TXD</span><strong>PA3 / RX</strong></div><div><span>驱动 EN</span><strong>PB5 / 高有效</strong></div><div><span>地线</span><strong>GND ↔ GND</strong></div><p>EN 已改由 PB5 控制，与外部 3.3V 断开。TTL 供电脚不接；关闭 EN 不等于切断 12V 电源。</p></div>
+        <div class="wiring"><div class="eyebrow">接线速查</div><div><span>编码器① OUT / PWM</span><strong>PA0</strong></div><div><span>编码器② OUT / PWM</span><strong>PB7</strong></div><div><span>TTL RXD</span><strong>PA2 / TX</strong></div><div><span>TTL TXD</span><strong>PA3 / RX</strong></div><div><span>驱动 EN</span><strong>PB5 / 高有效</strong></div><div><span>地线</span><strong>GND ↔ GND</strong></div><p>EN 已改由 PB5 控制，与外部 3.3V 断开。TTL 供电脚不接；关闭 EN 不等于切断 12V 电源。</p></div>
       </aside>
       <div class="readings">
         <section class="angle-card card">
@@ -47,7 +49,9 @@
             <div class="dial" id="dial" aria-hidden="true"><span class="dial-top">0°</span><span class="dial-right">90°</span><span class="dial-bottom">180°</span><span class="dial-left">270°</span><div class="dial-inner"></div><div class="needle" id="needle" hidden><i></i></div><div class="dial-center"></div></div>
           </div>
         </section>
+        <div id="encoder-readouts" class="encoder-readouts" aria-label="两路 AS5600 编码器"></div>
         <section id="closed-loop-panel" class="closed-loop-card card" aria-label="闭环运动工作台" hidden></section>
+        <section id="closed-loop-panel-2" class="closed-loop-card card" aria-label="电机②闭环运动工作台" hidden></section>
         <section data-legacy-control class="enable-card card" aria-labelledby="enable-heading">
           <div class="target-heading"><div><div class="section-label" id="enable-heading">驱动使能</div><p>EN → PB5 · 高电平开启，低电平关闭</p></div><span id="enable-badge" class="motor-badge">状态未知</span></div>
           <div class="enable-actions">

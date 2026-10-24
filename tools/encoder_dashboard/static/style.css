@@ -880,3 +880,19 @@ footer .dot {
 /* Native angle slider follows the confirmed MCU soft limits. */
 .closed-loop-card input.cl-angle-slider { padding:0; min-height:36px; accent-color:#008d75; cursor:ew-resize; }
 .cl-slider-label { margin-top:14px; }
+
+.encoder-readouts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.encoder-card { min-width:0; padding:24px; }
+.encoder-card .angle-heading { align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.encoder-card .angle-heading p { margin-top:8px; }
+.encoder-angle { margin:24px 0; font-variant-numeric:tabular-nums; }
+.encoder-angle strong { font-size:clamp(32px,4vw,48px); font-weight:600; letter-spacing:-2px; }
+.encoder-angle>span { color:var(--muted); margin-left:6px; font-size:24px; }
+.encoder-track { position:relative; height:6px; background:#e3edf0; border-radius:8px; margin-top:18px; }
+.encoder-track i { position:absolute; width:10px; height:10px; top:-2px; border-radius:50%; background:#008d75; transform:translateX(-50%); }
+.encoder-card[data-encoder="2"] .encoder-track i { background:#3478ba; }
+.encoder-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:0; }
+.encoder-metrics dt { color:var(--muted); font-size:11px; }
+.encoder-metrics dd { margin:8px 0 0; font-size:13px; font-variant-numeric:tabular-nums; }
+.encoder-meta { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; color:var(--muted); font-size:11px; margin:22px 0 0; }
+@media(max-width:1050px) { .encoder-readouts { grid-template-columns:1fr; } }

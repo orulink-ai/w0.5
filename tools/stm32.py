@@ -19,7 +19,8 @@ def main() -> None:
     parser.add_argument("--port", help="Serial device path (required for monitor)")
     parser.add_argument("--env", default="g431_as5600_usb",
                         choices=("g431_as5600_usb", "g431_as5600_uart", "g431_pwm_loopback",
-                                 "g431_motor_jog", "g431_enable_uart", "g431_motor_gpio", "g431_closed_loop"))
+                                 "g431_motor_jog", "g431_enable_uart", "g431_motor_gpio", "g431_closed_loop",
+                                 "g431_dual_encoder", "g431_dual_motor"))
     args = parser.parse_args()
     if args.action == "dashboard":
         python = ROOT / ".venv/bin/python"

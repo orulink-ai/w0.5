@@ -19,6 +19,11 @@ assert.equal(viewModel(state(), true).ready, false);
 assert.equal(viewModel(state({command:{status:"pending"}})).ready, false);
 assert.equal(viewModel(state({state:"UNCALIBRATED", command:{status:"accepted"}})).ready, false);
 assert.equal(viewModel(state({supported:false})).visible, false);
+const diagnostic = state({supported:false,available:false,protocol_version:null}, {encoder_mode:'dual_diagnostic'});
+assert.equal(viewModel(diagnostic).visible,true,'Dual diagnostics must retain the original single-motor workstation');
+for (const action of ['ready','calibrate','stop','reset','overspeedConfig']) {
+  assert.equal(Boolean(viewModel(diagnostic)[action]),false,'Diagnostic firmware cannot execute motor commands');
+}
 assert.notEqual(viewModel(state({state:"RUNNING", calibrated:false, enabled:true})).label, "闭环运行中");
 assert.notEqual(viewModel(state({state:"RUNNING", sensor_valid:false, enabled:true})).label, "闭环运行中");
 assert.notEqual(viewModel(state({state:"RUNNING", enabled:false})).label, "闭环运行中");

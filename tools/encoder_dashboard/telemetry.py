@@ -7,6 +7,7 @@ from commands import TargetChannel
 from enable_commands import EnableChannel
 from motor_commands import MotorChannel
 from closed_loop_commands import ClosedLoopChannel
+from encoder_channels import EncoderChannels
 
 
 def parse_line(line):
@@ -49,7 +50,9 @@ class TelemetryStore:
         self.enable = EnableChannel(clock)
         self.motor = MotorChannel(clock)
         self.closed_loop = ClosedLoopChannel(clock)
+        self.closed_loop_secondary = ClosedLoopChannel(clock)
         self._enable_seen = False
+        self.encoders = EncoderChannels()
 
     def set_connection(self, connected, port="", error=""):
         with self._lock:
@@ -60,7 +63,9 @@ class TelemetryStore:
             self.enable.reset(connected)
             self.motor.reset(connected)
             self.closed_loop.reset(connected)
+            self.closed_loop_secondary.reset(connected)
             self._enable_seen = False
+            self.encoders.reset()
             if connected:
                 self._port = port
                 self._reading = None
@@ -74,7 +79,27 @@ class TelemetryStore:
         enable_status = self.enable.consume(line)
         motor_status = self.motor.consume(line)
         closed_loop_status = self.closed_loop.consume(line)
+        secondary_status = (self.closed_loop_secondary.consume(line.replace('#FOC2_', '#FOC_', 1))
+                            if line.startswith('#FOC2_') else False)
         with self._lock:
+            was_diagnostic = self.encoders.diagnostic
+            channel_sample = self.encoders.consume(line, parse_line, now)
+            if channel_sample:
+                channel_id, channel_reading, tagged = channel_sample
+                if channel_id == 1:
+                    reading = channel_reading
+                if tagged and not was_diagnostic:
+                    # Diagnostic firmware never owns or enables a motor. Do not
+                    # retain old motion capability across an in-place reflash.
+                    self.closed_loop.reset(self._connected)
+                    self.closed_loop_secondary.reset(self._connected)
+                    self.control.reset(self._connected)
+                    self.enable.reset(self._connected)
+                    self.motor.reset(self._connected)
+                    self._enable_seen = True
+                    self._jog = self._jog_at = None
+            if closed_loop_status or secondary_status:
+                self.encoders.diagnostic = False
             if (enable_status or motor_status or closed_loop_status) and not self._enable_seen:
                 self._enable_seen = True
                 self.control.reset(self._connected)
@@ -96,6 +121,11 @@ class TelemetryStore:
                 self._samples += 1
                 self._valid_samples += int(reading["valid"])
 
+    def foc_channel(self, motor_id):
+        if type(motor_id) is not int or motor_id not in (1, 2):
+            raise ValueError('电机编号只能为 1 或 2。')
+        return self.closed_loop if motor_id == 1 else self.closed_loop_secondary
+
     def snapshot(self, now=None):
         now = self._clock() if now is None else now
         with self._lock:
@@ -114,10 +144,19 @@ class TelemetryStore:
                    jog_age < 2.5 else None)
             if reading and signal != "valid":
                 reading.update(valid=False, angle_deg=None, velocity_rad_s=None, frequency_hz=None)
+            encoders = self.encoders.snapshot(self._connected, now)
+            controls = [self.closed_loop.snapshot(), self.closed_loop_secondary.snapshot()]
             return {"connected": self._connected, "port": self._port, "baud": 115200,
                     "signal": signal, "reading": reading, "error": self._error,
                     "age_ms": None if age is None else round(age * 1000),
                     "samples": self._samples, "valid_samples": self._valid_samples,
                     "logs": list(self._logs), "control": self.control.snapshot(), "jog": jog,
                     "enable": self.enable.snapshot(), "motor": self.motor.snapshot(),
-                    "closed_loop": self.closed_loop.snapshot()}
+                    "closed_loop": controls[0],
+                    "motors": [dict(id=index + 1, signal=encoders[index]['signal'],
+                                    reading=encoders[index]['reading'], closed_loop=control)
+                               for index, control in enumerate(controls)],
+                    "encoders": encoders,
+                    "encoder_mode": ("dual_control" if controls[1]['supported'] else
+                                     "dual_diagnostic" if self.encoders.diagnostic else
+                                     "single_with_aux" if self.encoders.auxiliary else "single")}

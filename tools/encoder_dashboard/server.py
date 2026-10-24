@@ -114,40 +114,48 @@ class SerialReader:
                 raise CommandError("串口发送失败，电机请求未确认。") from error
             self.store.motor.wait(request_id)
 
-    def send_foc(self, payload):
+    @staticmethod
+    def _foc_packet(packet, motor_id):
+        return packet if motor_id == 1 else packet.replace(b'FOC,', b'FOC2,', 1)
+
+    def send_foc(self, payload, motor_id=1):
         payload = validate_foc(payload)
-        # Waiting outside the transport lock lets STOP preempt an unacknowledged
-        # calibration/start immediately. Only writing and connection ownership
-        # are serialized; commands are never automatically retried.
+        channel = self.store.foc_channel(motor_id)
+        # One transport lock, independent request/lease state per motor.
+        # ACK waits stay outside this lock so either motor can STOP promptly.
         with self._control:
             if self._serial is None or not self._serial.is_open:
                 raise CommandError("串口未连接。")
-            request_id, packet = self.store.closed_loop.begin(
-                payload, self.store.snapshot()["signal"] == "valid")
+            state = self.store.snapshot()
+            valid = (state['signal'] == 'valid' if motor_id == 1 else
+                     state['encoders'][1]['signal'] == 'valid')
+            request_id, packet = channel.begin(payload, valid)
+            packet = self._foc_packet(packet, motor_id)
             try:
                 if self._serial.write(packet) != len(packet):
                     raise serial.SerialTimeoutException("Incomplete FOC write")
             except (OSError, serial.SerialException) as error:
-                self.store.closed_loop.fail(request_id, f"串口发送失败：{error}")
+                channel.fail(request_id, f"串口发送失败：{error}")
                 raise CommandError("串口发送失败，闭环请求未确认。") from error
-        self.store.closed_loop.wait(request_id)
+        channel.wait(request_id)
 
-    def send_foc_heartbeat(self, payload):
+    def send_foc_heartbeat(self, payload, motor_id=1):
         if type(payload) is not dict or set(payload) != {'run_id'}:
             raise CommandError("心跳只接受 run_id。")
+        channel = self.store.foc_channel(motor_id)
         run_id = payload['run_id']
         with self._control:
             if self._serial is None or not self._serial.is_open:
-                self.store.closed_loop.clear_owner()
+                channel.clear_owner()
                 raise CommandError("串口未连接，运动租约已失效。")
-            packet = self.store.closed_loop.heartbeat(run_id)
+            packet = self._foc_packet(channel.heartbeat(run_id), motor_id)
             try:
                 if self._serial.write(packet) != len(packet):
                     raise serial.SerialTimeoutException("Incomplete FOC heartbeat write")
             except (OSError, serial.SerialException) as error:
-                self.store.closed_loop.clear_owner()
+                channel.clear_owner()
                 raise CommandError("运动心跳发送失败，租约已释放。") from error
-            self.store.closed_loop.heartbeat_written(run_id)
+            channel.heartbeat_written(run_id)
         return {"ok": True, "run_id": run_id}
 
     def _read(self, connection, stop):
@@ -216,6 +224,8 @@ def make_server(reader, store, port=8840):
                          "/components/closed-loop.js": ("components/closed-loop.js", "application/javascript; charset=utf-8"),
                          "/components/lease-keeper.js": ("components/lease-keeper.js", "application/javascript; charset=utf-8"),
                          "/components/live-position.js": ("components/live-position.js", "application/javascript; charset=utf-8"),
+                         "/components/encoder-readouts.js": ("components/encoder-readouts.js", "application/javascript; charset=utf-8"),
+                         "/components/motor-workbench.js": ("components/motor-workbench.js", "application/javascript; charset=utf-8"),
                          "/style.css": ("style.css", "text/css; charset=utf-8"),
                          "/robot-viewer.js": ("robot-viewer.js", "application/javascript; charset=utf-8"),
                          "/robot-finishes.mjs": ("robot-finishes.mjs", "application/javascript; charset=utf-8"),
@@ -284,6 +294,11 @@ def make_server(reader, store, port=8840):
                     reader.send_motor(data.get("action"))
                 elif self.path == "/api/foc":
                     reader.send_foc(data)
+                elif self.path == "/api/foc/2":
+                    reader.send_foc(data, motor_id=2)
+                elif self.path == "/api/foc/2/heartbeat":
+                    self.respond(200, reader.send_foc_heartbeat(data, motor_id=2))
+                    return
                 elif self.path == "/api/foc/heartbeat":
                     self.respond(200, reader.send_foc_heartbeat(data))
                     return

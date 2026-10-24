@@ -13,8 +13,13 @@ function showError(message) {
 
 const request = (...args) => DashboardAPI.request(...args);
 const legacy = new LegacyControls(state => render(state));
+const encoderReadouts = new EncoderReadouts.EncoderReadouts($("encoder-readouts"));
 const closedLoop = new ClosedLoopUI.ClosedLoopPanel($("closed-loop-panel"), {
+  title:'电机① · 闭环运动工作台',description:'编码器 PA0 · PWM PA8 / PA9 / PA10 · EN PB5 · 独立校准与启停',
   send: payload => DashboardAPI.post("/api/foc", payload), onState: state => render(state),
+});
+const secondMotor = new MotorWorkbench.AdditionalMotorPanel($("closed-loop-panel-2"), {
+  post:(path,payload)=>DashboardAPI.post(path,payload),onState:state=>render(state),
 });
 
 function setButtons() {
@@ -84,10 +89,17 @@ function render(state) {
   if (valid) $("needle").style.transform = `rotate(${reading.angle_deg}deg)`;
   $("frame-count").textContent = state.samples.toLocaleString();
   $("valid-count").textContent = `有效 ${state.valid_samples} / ${state.samples}`;
+  encoderReadouts.render(state);
   showError(state.error || actionError);
   legacy.render(state, busy);
   closedLoop.render(state);
+  secondMotor.render(state);
   if (state.closed_loop?.supported) $("motor-footer").textContent = "编码器闭环 · 电压模式 · 手动开始 · 页面连接有效时持续保持";
+  if (state.encoder_mode === 'dual_control') $("motor-footer").textContent = '双路独立闭环 · 分别校准与启停 · 每路独立运动租约';
+
+  if (state.encoder_mode === "dual_diagnostic") {
+    $("motor-footer").textContent = "双编码器只读诊断 · 单路控制面板保留，当前固件不执行运动";
+  }
 
   const logs = state.logs.slice(-8);
   const key = JSON.stringify(logs);
