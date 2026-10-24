@@ -11,7 +11,7 @@
   }
 
   class LivePositionQueue {
-    constructor({send, onState = () => {}, onError = () => {}, clock = globalThis, intervalMs = 200}) {
+    constructor({send, onState = () => {}, onError = () => {}, clock = globalThis, intervalMs = 50}) {
       this.send = send;
       this.onState = onState;
       this.onError = onError;

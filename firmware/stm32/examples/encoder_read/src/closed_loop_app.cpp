@@ -6,7 +6,7 @@ namespace closed_application {
 namespace {
 constexpr float toRadians(float degrees) { return degrees*closed_loop::kTwoPi/360; }
 constexpr float toDegrees(float rad) { return rad*360/closed_loop::kTwoPi; }
-constexpr float radiansPerSecond(float rpm) { return rpm*closed_loop::kTwoPi/60; }
+constexpr float radiansPerSecond(float rpm) { return closed_loop::tuning::rpmToRadiansPerSecond(rpm); }
 const char* modeName(closed_loop::Mode mode) {
   return mode==closed_loop::Mode::Position ? "POSITION" : "VELOCITY";
 }
@@ -14,7 +14,7 @@ const char* modeName(closed_loop::Mode mode) {
 void Application::begin() {
   console_.begin(115200);
   if(!hardware_.begin()) fail("INIT_FAILED");
-  console_.println("#FOC_INFO,v4 position servo/velocity; live TARGET; 1V; explicit calibration; 1500ms owner lease");
+  console_.println("#FOC_INFO,v4 position servo/velocity; live TARGET; 6V; explicit calibration; 1500ms owner lease");
   console_.println("#FOC_INFO,PB4 nFAULT protects only a physically connected fault wire");
   console_.println("#FOC_INFO,DEBUG v1: shaft_rad,target_rad,velocity_sp_rad_s,Uq_V,electrical_rad,zero_electrical_rad,direction,measurement_rad_s");
   report();
@@ -71,7 +71,12 @@ void Application::apply(const closed_protocol::Request& r) {
         !alignment_.active()&&lease_.owns(r.run_id,received_ms)&&
         hardware_.sensor().valid()&&hardware_.enabled()&&hardware_.pinHighReadback()&&
         policy_.retargetPosition(toRadians(r.a),received_ms);
-    if(accepted) target_deg_=r.a;
+    if(accepted) {
+      target_deg_=r.a;
+#ifdef FOC_DEBUG_TRACE
+      trace_.acceptedTarget(r.id,received_ms);
+#endif
+    }
     reply(accepted,r.id,accepted?"TARGET":"TARGET_NOT_READY");
     report(); return;
   }
@@ -142,6 +147,9 @@ void Application::apply(const closed_protocol::Request& r) {
         fail("ENABLE_FAILED"); accepted=false;
       }
       target_deg_=toDegrees(policy_.requestedTarget());
+#ifdef FOC_DEBUG_TRACE
+      if(accepted)trace_.acceptedTarget(r.id,received_ms);
+#endif
     }
   }
   if(accepted&&(r.action==Action::Calibrate||r.action==Action::Position||r.action==Action::Velocity)) {
@@ -233,6 +241,28 @@ void Application::debug(bool force) {
   console_.print(motor.zero_electric_angle,6); console_.print(','); console_.print(static_cast<int>(motor.sensor_direction)); console_.print(',');
   console_.println(hardware_.sensor().measurementVelocity(),6);
 }
+void Application::trace(uint32_t now) {
+#ifdef FOC_DEBUG_TRACE
+  if(!trace_.due(now,policy_.running()))return;
+  const auto& sensor=hardware_.sensor();
+  const auto& motor=hardware_.motor();
+  const float relative=toDegrees(policy_.relative(hardware_.sensor().getAngle()));
+  const float planned=policy_.mode()==closed_loop::Mode::Position
+      ? toDegrees(policy_.plannedRelative()) : relative;
+  const auto frame=trace_.frame(now,relative,target_deg_,planned,
+      sensor.measurementVelocity()*motor.sensor_direction*60/closed_loop::kTwoPi,
+      motor.voltage.q,motor.voltage_limit);
+  char line[160];
+  const size_t length=frame.format(line,sizeof(line));
+  // Never wait for trace output: protect control/lease/watchdog cadence under
+  // transport pressure. The 256-byte TX buffer fits one entire trace record.
+  if(length&&console_.availableForWrite()>=static_cast<int>(length)) {
+    console_.write(reinterpret_cast<const uint8_t*>(line),length);
+  }
+#else
+  (void)now;
+#endif
+}
 void Application::telemetry() {
   const auto& sensor=hardware_.sensor();
   const auto& sample=sensor.sample();
@@ -247,7 +277,13 @@ void Application::tick() {
   hardware_.poll(); expireLease(millis()); control();
   const auto now=millis();
   if(static_cast<uint32_t>(now-telemetry_ms_)>=100) { telemetry_ms_=now; telemetry(); }
-  if(static_cast<uint32_t>(now-report_ms_)>=200) { report_ms_=now; report(); debug(); }
+  if(static_cast<uint32_t>(now-report_ms_)>=200) {
+    report_ms_=now; report();
+#ifndef FOC_DEBUG_TRACE
+    debug();
+#endif
+  }
+  trace(millis());
 }
 } // namespace closed_application
 #endif

@@ -74,6 +74,12 @@ assert.equal(positionInputs.target_deg.value,"60");assert.deepEqual(edits,[["inp
 PayloadPanel.prototype.setPositionValue.call(positionPanel,NaN);
 assert.equal(edits.length,2,"Transient blank number edits do not send invalid targets");
 
+const speedInputs = {target_deg:{value:"30"},speed_rpm:{value:"10"},rpm:{value:"-10"}};
+const speedPanel = {input:name=>speedInputs[name]};
+assert.deepEqual(PayloadPanel.prototype.payload.call(speedPanel,"position"),
+  {action:"position",target_deg:30,speed_rpm:10});
+assert.deepEqual(PayloadPanel.prototype.payload.call(speedPanel,"velocity"),{action:"velocity",rpm:-10});
+
 // Exercise the actual panel request lifecycle without a browser or hardware.
 const {LeaseKeeper}=require("../encoder_dashboard/static/components/lease-keeper.js");
 const {ClosedLoopPanel}=require("../encoder_dashboard/static/components/closed-loop.js");

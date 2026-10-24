@@ -1,0 +1,270 @@
+[
+  {
+    "speed_rpm": "5",
+    "error": null,
+    "trace_count": 203,
+    "target_count": 52,
+    "rtt_median_ms": 10.75,
+    "rtt_p95_ms": 16.69999998807907,
+    "peak_uq": 0.19,
+    "peak_rpm": 6.449,
+    "final_active_error_deg": 0.005,
+    "steps": [
+      {
+        "phase": "step-positive",
+        "delay_0_5deg_ms": 41,
+        "final_error_deg": -0.07899999999999974,
+        "overshoot_deg": 0.19100000000000072
+      },
+      {
+        "phase": "step-negative",
+        "delay_0_5deg_ms": 91,
+        "final_error_deg": 0.01499999999999968,
+        "overshoot_deg": 0.33999999999999986
+      },
+      {
+        "phase": "step-zero",
+        "delay_0_5deg_ms": 40,
+        "final_error_deg": 0.119,
+        "overshoot_deg": 0.202
+      }
+    ],
+    "drag_rms_deg": 0.7196726580146542,
+    "drag_peak_error_deg": 1.564,
+    "drag_interval_median_ms": 51.70000000298023,
+    "trial": "5"
+  },
+  {
+    "speed_rpm": "10",
+    "error": null,
+    "trace_count": 198,
+    "target_count": 52,
+    "rtt_median_ms": 10.200000002980232,
+    "rtt_p95_ms": 16.400000005960464,
+    "peak_uq": 0.225,
+    "peak_rpm": 12.229,
+    "final_active_error_deg": -0.072,
+    "steps": [
+      {
+        "phase": "step-positive",
+        "delay_0_5deg_ms": 45,
+        "final_error_deg": -0.07200000000000006,
+        "overshoot_deg": 0.28500000000000014
+      },
+      {
+        "phase": "step-negative",
+        "delay_0_5deg_ms": 45,
+        "final_error_deg": 0.019000000000000128,
+        "overshoot_deg": 0.33500000000000085
+      },
+      {
+        "phase": "step-zero",
+        "delay_0_5deg_ms": 45,
+        "final_error_deg": 0.101,
+        "overshoot_deg": 0.185
+      }
+    ],
+    "drag_rms_deg": 0.8478470159763493,
+    "drag_peak_error_deg": 3.17,
+    "drag_interval_median_ms": 51.70000000298023,
+    "trial": "10"
+  },
+  {
+    "speed_rpm": "15",
+    "error": "Run ended: {\"protocol_version\":4,\"overspeed_enabled\":true,\"run_id\":0,\"lease_remaining_ms\":0,\"stop_reason\":\"FAULT\",\"state\":\"FAULT\",\"mode\":\"STOP\",\"last_id\":916096491,\"calibrated\":true,\"enabled\":false,\"sensor_valid\":true,\"relative_deg\":-1.034,\"target_deg\":-8,\"velocity_rpm\":-0.024,\"zero_raw_deg\":343.485,\"soft_min_deg\":-90,\"soft_max_deg\":90,\"fault\":\"OVERSPEED\",\"supported\":true,\"available\":true,\"age_ms\":129,\"max_run_ms\":null,\"lease_timeout_ms\":1500,\"owned_run_id\":null,\"settling\":false,\"command\":{\"status\":\"accepted\",\"id\":916096491,\"action\":\"target\",\"error\":\"\"}}",
+    "trace_count": 53,
+    "target_count": 2,
+    "rtt_median_ms": 14.550000004470348,
+    "rtt_p95_ms": 14.400000005960464,
+    "peak_uq": 0.113,
+    "peak_rpm": 13.703,
+    "final_active_error_deg": 11.690999999999999,
+    "steps": [
+      {
+        "phase": "step-positive",
+        "delay_0_5deg_ms": 44,
+        "final_error_deg": 0.20700000000000074,
+        "overshoot_deg": 2.1929999999999996
+      },
+      {
+        "phase": "step-negative",
+        "delay_0_5deg_ms": 43,
+        "final_error_deg": 11.690999999999999,
+        "overshoot_deg": 0
+      }
+    ],
+    "trial": "15"
+  },
+  {
+    "speed_rpm": "12",
+    "error": null,
+    "trace_count": 108,
+    "target_count": 52,
+    "rtt_median_ms": 10.5,
+    "rtt_p95_ms": 16.900000005960464,
+    "peak_uq": 0.171,
+    "peak_rpm": 14.1,
+    "final_active_error_deg": -0.058,
+    "steps": [
+      {
+        "phase": "step-positive",
+        "delay_0_5deg_ms": 38,
+        "final_error_deg": -0.16000000000000014,
+        "overshoot_deg": 0.2010000000000005
+      }
+    ],
+    "drag_rms_deg": 0.7871665187272183,
+    "drag_peak_error_deg": 1.6630000000000003,
+    "drag_interval_median_ms": 51.70000000298023,
+    "trial": "12"
+  },
+  {
+    "speed_rpm": "12wide",
+    "error": "Run ended: {\"protocol_version\":4,\"overspeed_enabled\":true,\"run_id\":0,\"lease_remaining_ms\":0,\"stop_reason\":\"FAULT\",\"state\":\"FAULT\",\"mode\":\"STOP\",\"last_id\":916096549,\"calibrated\":true,\"enabled\":false,\"sensor_valid\":true,\"relative_deg\":28.946,\"target_deg\":30,\"velocity_rpm\":-0.005,\"zero_raw_deg\":343.485,\"soft_min_deg\":-90,\"soft_max_deg\":90,\"fault\":\"OVERSPEED\",\"supported\":true,\"available\":true,\"age_ms\":52,\"max_run_ms\":null,\"lease_timeout_ms\":1500,\"owned_run_id\":null,\"settling\":false,\"command\":{\"status\":\"accepted\",\"id\":916096549,\"action\":\"target\",\"error\":\"\"}}",
+    "trace_count": 27,
+    "target_count": 1,
+    "rtt_median_ms": 11.799999997019768,
+    "rtt_p95_ms": 11.799999997019768,
+    "peak_uq": 0.263,
+    "peak_rpm": 16.948,
+    "final_active_error_deg": -7.0390000000000015,
+    "steps": [
+      {
+        "phase": "step-positive",
+        "delay_0_5deg_ms": 39,
+        "final_error_deg": -7.0390000000000015,
+        "overshoot_deg": 0
+      }
+    ],
+    "trial": "12wide"
+  },
+  {
+    "speed_rpm": "10wide",
+    "error": "Run ended: {\"protocol_version\":4,\"overspeed_enabled\":true,\"run_id\":0,\"lease_remaining_ms\":0,\"stop_reason\":\"FAULT\",\"state\":\"FAULT\",\"mode\":\"STOP\",\"last_id\":916096554,\"calibrated\":true,\"enabled\":false,\"sensor_valid\":true,\"relative_deg\":30.511,\"target_deg\":30,\"velocity_rpm\":-0.009,\"zero_raw_deg\":314.557,\"soft_min_deg\":-90,\"soft_max_deg\":90,\"fault\":\"OVERSPEED\",\"supported\":true,\"available\":true,\"age_ms\":11,\"max_run_ms\":null,\"lease_timeout_ms\":1500,\"owned_run_id\":null,\"settling\":false,\"command\":{\"status\":\"accepted\",\"id\":916096554,\"action\":\"target\",\"error\":\"\"}}",
+    "trace_count": 29,
+    "target_count": 1,
+    "rtt_median_ms": 14.900000005960464,
+    "rtt_p95_ms": 14.900000005960464,
+    "peak_uq": 0.223,
+    "peak_rpm": 11.301,
+    "final_active_error_deg": -6.969999999999999,
+    "steps": [
+      {
+        "phase": "step-positive",
+        "delay_0_5deg_ms": 45,
+        "final_error_deg": -6.969999999999999,
+        "overshoot_deg": 0
+      }
+    ],
+    "trial": "10wide"
+  },
+  {
+    "speed_rpm": "i05-10wide",
+    "error": null,
+    "trace_count": 203,
+    "target_count": 52,
+    "rtt_median_ms": 10.149999998509884,
+    "rtt_p95_ms": 17.700000002980232,
+    "peak_uq": 0.283,
+    "peak_rpm": 14.874,
+    "final_active_error_deg": 0.334,
+    "steps": [
+      {
+        "phase": "step-positive",
+        "delay_0_5deg_ms": 42,
+        "final_error_deg": -0.40500000000000114,
+        "overshoot_deg": 0
+      },
+      {
+        "phase": "step-negative",
+        "delay_0_5deg_ms": 91,
+        "final_error_deg": -1.6759999999999984,
+        "overshoot_deg": 1.9229999999999983
+      },
+      {
+        "phase": "step-zero",
+        "delay_0_5deg_ms": 41,
+        "final_error_deg": 0.067,
+        "overshoot_deg": 0.074
+      }
+    ],
+    "drag_rms_deg": 2.575766186783962,
+    "drag_peak_error_deg": 5.111,
+    "drag_interval_median_ms": 51.6000000089407,
+    "trial": "i05-10wide"
+  },
+  {
+    "speed_rpm": "i05-12wide",
+    "error": "Run ended: {\"protocol_version\":4,\"overspeed_enabled\":true,\"run_id\":0,\"lease_remaining_ms\":0,\"stop_reason\":\"FAULT\",\"state\":\"FAULT\",\"mode\":\"STOP\",\"last_id\":326861212,\"calibrated\":true,\"enabled\":false,\"sensor_valid\":true,\"relative_deg\":-5.205,\"target_deg\":-30,\"velocity_rpm\":-0.073,\"zero_raw_deg\":292.124,\"soft_min_deg\":-90,\"soft_max_deg\":90,\"fault\":\"OVERSPEED\",\"supported\":true,\"available\":true,\"age_ms\":41,\"max_run_ms\":null,\"lease_timeout_ms\":1500,\"owned_run_id\":null,\"settling\":false,\"command\":{\"status\":\"accepted\",\"id\":326861212,\"action\":\"target\",\"error\":\"\"}}",
+    "trace_count": 68,
+    "target_count": 2,
+    "rtt_median_ms": 13.950000002980232,
+    "rtt_p95_ms": 13.600000008940697,
+    "peak_uq": 0.264,
+    "peak_rpm": 17.659,
+    "final_active_error_deg": 31.927,
+    "steps": [
+      {
+        "phase": "step-positive",
+        "delay_0_5deg_ms": 45,
+        "final_error_deg": -0.3829999999999991,
+        "overshoot_deg": 0
+      },
+      {
+        "phase": "step-negative",
+        "delay_0_5deg_ms": 44,
+        "final_error_deg": 31.927,
+        "overshoot_deg": 0
+      }
+    ],
+    "trial": "i05-12wide"
+  },
+  {
+    "speed_rpm": "r100-5wide",
+    "error": "Run ended: {\"protocol_version\":4,\"overspeed_enabled\":true,\"run_id\":0,\"lease_remaining_ms\":0,\"stop_reason\":\"FAULT\",\"state\":\"FAULT\",\"mode\":\"STOP\",\"last_id\":1504371398,\"calibrated\":true,\"enabled\":false,\"sensor_valid\":true,\"relative_deg\":13.888,\"target_deg\":0,\"velocity_rpm\":0.047,\"zero_raw_deg\":292.138,\"soft_min_deg\":-90,\"soft_max_deg\":90,\"fault\":\"OVERSPEED\",\"supported\":true,\"available\":true,\"age_ms\":176,\"max_run_ms\":null,\"lease_timeout_ms\":1500,\"owned_run_id\":null,\"settling\":false,\"command\":{\"status\":\"accepted\",\"id\":1504371398,\"action\":\"position\",\"error\":\"\"}}",
+    "trace_count": 3,
+    "target_count": 0,
+    "rtt_median_ms": null,
+    "rtt_p95_ms": null,
+    "peak_uq": 0.332,
+    "peak_rpm": 12.616,
+    "final_active_error_deg": 3.942,
+    "steps": [],
+    "trial": "r100-5wide"
+  },
+  {
+    "speed_rpm": "final10wide",
+    "error": null,
+    "trace_count": 199,
+    "target_count": 52,
+    "rtt_median_ms": 10.75,
+    "rtt_p95_ms": 19.399999991059303,
+    "peak_uq": 0.277,
+    "peak_rpm": 14.908,
+    "final_active_error_deg": 0.153,
+    "steps": [
+      {
+        "phase": "step-positive",
+        "delay_0_5deg_ms": 47,
+        "final_error_deg": -0.38700000000000045,
+        "overshoot_deg": 0
+      },
+      {
+        "phase": "step-negative",
+        "delay_0_5deg_ms": 46,
+        "final_error_deg": -1.559000000000001,
+        "overshoot_deg": 1.8150000000000013
+      },
+      {
+        "phase": "step-zero",
+        "delay_0_5deg_ms": 47,
+        "final_error_deg": 0.378,
+        "overshoot_deg": 0.378
+      }
+    ],
+    "drag_rms_deg": 2.59811094247104,
+    "drag_peak_error_deg": 5.226,
+    "drag_interval_median_ms": 51.6000000089407,
+    "trial": "final10wide"
+  }
+]

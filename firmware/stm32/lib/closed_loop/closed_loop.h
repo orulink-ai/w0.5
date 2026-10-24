@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include "position_control.h"
+#include "closed_loop_tuning.h"
 
 namespace closed_loop {
 constexpr float kTwoPi = 6.28318530718f;
@@ -72,6 +73,7 @@ class Policy {
   float upper() const { return upper_; }
   float requestedTarget() const { return requested_; }
   float positionSpeed() const { return position_speed_; }
+  float plannedRelative() const { return reference_.current(); }
   float zeroRaw() const { return calibrated() ? zero_ / direction_ : 0; }
   void setCalibrated(int direction) {
     direction_ = direction == -1 || direction == 1 ? direction : 0;
@@ -97,8 +99,8 @@ class Policy {
   bool startPosition(float target, float speed_rad_s,
                      uint32_t now, bool valid, float current_raw) {
     if (!ready(valid, current_raw) || !std::isfinite(target) || target < lower_ ||
-        target > upper_ || !std::isfinite(speed_rad_s) || speed_rad_s < kTwoPi/600 ||
-        speed_rad_s > kTwoPi/12) return false;
+        target > upper_ || !std::isfinite(speed_rad_s) || speed_rad_s < tuning::kMinSpeedRadS ||
+        speed_rad_s > tuning::kMaxSpeedRadS) return false;
     if (!reference_.start(relative(current_raw), target, speed_rad_s, now)) return false;
     mode_ = Mode::Position; requested_ = target;
     position_speed_ = speed_rad_s;
@@ -114,7 +116,7 @@ class Policy {
   }
   bool startVelocity(float velocity_rad_s, uint32_t, bool valid, float current_raw) {
     if (!ready(valid, current_raw) || !std::isfinite(velocity_rad_s) ||
-        std::fabs(velocity_rad_s) > kTwoPi/12 || std::fabs(velocity_rad_s) < kTwoPi/600) return false;
+        std::fabs(velocity_rad_s) > tuning::kMaxSpeedRadS || std::fabs(velocity_rad_s) < tuning::kMinSpeedRadS) return false;
     mode_ = Mode::Velocity; velocity_ = velocity_rad_s;
     requested_ = relative(current_raw); running_ = true;
     return true;

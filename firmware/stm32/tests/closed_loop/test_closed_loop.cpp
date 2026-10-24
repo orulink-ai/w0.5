@@ -2,6 +2,7 @@
 #include "closed_protocol.h"
 #include "run_lease.h"
 #include "position_control.h"
+#include "debug_trace.h"
 #include <cassert>
 #include <cmath>
 
@@ -139,6 +140,23 @@ void testPolicy() {
   }
 }
 
+void testSpeedBounds() {
+  auto rad_s=[](float rpm){return rpm*kTwoPi/60;};
+  Policy p;p.setCalibrated(1);assert(p.zero(0));
+  assert(p.startPosition(.5f,rad_s(10),0,true,0));p.stop();
+  assert(!p.startPosition(.5f,rad_s(10.01f),0,true,0));
+  assert(p.startPosition(.5f,rad_s(.1f),0,true,0));p.stop();
+  assert(!p.startPosition(.5f,rad_s(.09f),0,true,0));
+  for(float sign:{-1.f,1.f}) {
+    assert(p.startVelocity(rad_s(sign*10),0,true,0));p.stop();
+    assert(!p.startVelocity(rad_s(sign*10.01f),0,true,0));
+    assert(p.startVelocity(rad_s(sign*.1f),0,true,0));p.stop();
+    assert(!p.startVelocity(rad_s(sign*.09f),0,true,0));
+  }
+  assert(!p.startVelocity(NAN,0,true,0));
+  assert(!p.startPosition(.5f,INFINITY,0,true,0));
+}
+
 void testRetargetPosition() {
   Policy p;p.setCalibrated(-1);assert(p.zero(20));
   assert(!p.retargetPosition(.5f,0)); // A target update cannot arm the controller.
@@ -165,6 +183,26 @@ void testRetargetPosition() {
   assert(!lease.owns(42,1601)&&!lease.keepalive(42,1601));
   assert(lease.start(43,1700)&&!lease.owns(42,1700));
   lease.stop();assert(!lease.owns(43,1701));
+}
+
+void testDebugTrace() {
+  DebugTrace trace;
+  assert(!trace.due(0,false));
+  trace.acceptedTarget(17,100);
+  assert(trace.due(100,true));
+  assert(!trace.due(149,true)&&trace.due(150,true));
+  trace.acceptedTarget(18,160);
+  assert(!trace.due(170,true)); // Drag updates never restart the 20Hz clock.
+  auto frame=trace.frame(200,-1.2345f,10.5f,2.25f,-.125f,2.999f,3);
+  assert(frame.last_target_id==18&&frame.target_received_ms==160&&frame.mcu_ms==200);
+  char line[160]{};
+  assert(frame.format(line,sizeof(line))>0);
+  assert(std::strcmp(line,"#FOC_TRACE,1,200,18,160,-1.235,10.500,2.250,-0.125,2.999,3.000\n")==0);
+  assert(frame.format(line,10)==0);
+  frame.actual_uq=NAN;assert(frame.format(line,sizeof(line))==0);
+  assert(trace.due(1000,true)&&!trace.due(1001,true)); // No catch-up burst.
+  assert(!trace.due(1002,false)&&trace.due(UINT32_MAX-20,true));
+  assert(!trace.due(28,true)&&trace.due(29,true)); // 50ms across rollover.
 }
 
 void testAlignment() {
@@ -230,5 +268,5 @@ void testOverspeedSwitch() {
   Policy reboot;assert(reboot.overspeedEnabled()); // No persistent bypass.
 }
 int main() {
-  testProtocol();testFeedback();testLease();testPositionComponents();testPolicy();testRetargetPosition();testAlignment();testManualFaultReset();testOverspeedSwitch();
+  testProtocol();testFeedback();testLease();testPositionComponents();testPolicy();testSpeedBounds();testRetargetPosition();testDebugTrace();testAlignment();testManualFaultReset();testOverspeedSwitch();
 }

@@ -50,15 +50,20 @@ class ValidationTests(unittest.TestCase):
                         {'action':'limits','min_deg':0,'max_deg':10},
                         {'action':'position','target_deg':-180,'speed_rpm':1},
                         {'action':'velocity','rpm':-.1},
-                        {'action':'position','target_deg':0,'speed_rpm':.1}):
+                        {'action':'position','target_deg':0,'speed_rpm':.1},
+                        {'action':'position','target_deg':30,'speed_rpm':10},
+                        {'action':'velocity','rpm':10}, {'action':'velocity','rpm':-10}):
             self.assertEqual(validate_foc(payload), payload)
         bad = [None, [], True, {}, {'action':'START'}, {'action':'stop','extra':0},
                {'action':'position'}, {'action':'velocity','rpm':0},
-               {'action':'velocity','rpm':5.01}, {'action':'limits','min_deg':1,'max_deg':90},
+               {'action':'velocity','rpm':10.01}, {'action':'velocity','rpm':-10.01},
+               {'action':'velocity','rpm':.09}, {'action':'velocity','rpm':-.09}, {'action':'limits','min_deg':1,'max_deg':90},
                {'action':'limits','min_deg':-4,'max_deg':4},
                {'action':'sweep','min_deg':0,'max_deg':4,'rpm':1},
                {'action':'sweep','min_deg':0,'max_deg':5,'rpm':-1},
-               {'action':'position','target_deg':0,'speed_rpm':5.01}]
+               {'action':'position','target_deg':0,'speed_rpm':10.01},
+               {'action':'position','target_deg':0,'speed_rpm':.09},
+               {'action':'position','target_deg':0,'speed_rpm':-.1}]
         for value in (True, '10', None, [], {}, float('nan'), float('inf'), -float('inf'), 10**500):
             bad.append({'action':'position','target_deg':value,'speed_rpm':1})
         for payload in bad:

@@ -56,10 +56,10 @@ def validate_foc(payload):
             raise ValueError('相对目标必须在 -180° 到 180° 内。')
     if 'rpm' in data:
         speed = data['rpm']
-        if not .1 <= abs(speed) <= 5:
-            raise ValueError('速度范围为 0.1～5 rpm；恒速模式可用负数反转。')
-    if 'speed_rpm' in data and not .1 <= data['speed_rpm'] <= 5:
-        raise ValueError('移动速度范围为 0.1～5 rpm。')
+        if not .1 <= abs(speed) <= 10:
+            raise ValueError('速度范围为 0.1～10 rpm；恒速模式可用负数反转。')
+    if 'speed_rpm' in data and not .1 <= data['speed_rpm'] <= 10:
+        raise ValueError('移动速度范围为 0.1～10 rpm。')
     return data
 
 

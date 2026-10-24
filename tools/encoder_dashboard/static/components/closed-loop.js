@@ -66,7 +66,7 @@
         </div>
         <p class="target-status" data-field="overspeed">超速保护：等待芯片状态</p>
         <div class="enable-actions"><button type="button" class="secondary" data-action="overspeed" disabled>关闭超速保护</button></div>
-        <p class="target-note">超速阈值为约19rpm（115°/秒），与目标速度上限5rpm不同。停机后可切换；关闭后手拨超速不会触发此保护，位置保持与软限位仍有效。芯片重启后恢复开启。</p>
+        <p class="target-note">超速阈值为约19rpm（115°/秒），与目标速度上限10rpm不同。停机后可切换；关闭后手拨超速不会触发此保护，位置保持与软限位仍有效。芯片重启后恢复开启。</p>
         <div class="enable-actions">
           <button class="enable-on" data-action="calibrate" disabled>校准 FOC · 转轴会运动</button>
           <button class="secondary" data-action="zero" disabled>当前位置设为零点</button>
@@ -88,10 +88,10 @@
             <label class="cl-slider-label">拖动目标角度<input name="target_range" class="cl-angle-slider" type="range" value="0" min="-90" max="90" step="0.5" disabled></label>
             <p data-field="live-target" class="target-status">等待固件确认角度范围。</p>
             <div class="cl-presets">${[-45, 0, 45, 90].map(angle => `<button type="button" data-preset="${angle}">${angle}°</button>`).join("")}</div>
-            <label>移动速度（rpm）<input name="speed_rpm" type="number" value="3" min="0.1" max="5" step="0.1"></label>
+            <label>移动速度（rpm）<input name="speed_rpm" type="number" value="10" min="0.1" max="10" step="0.1"></label>
             <p class="target-note">先显式启动位置控制，再拖动滑块或修改角度，可实时更新目标。移动速度保持本次启动时设置；本版用于定位与保持，手动转轴前请先停止。</p>
           </div>
-          <div data-pane="velocity" hidden><label>目标速度（rpm）<input name="rpm" type="number" value="3" step="0.1"></label>
+          <div data-pane="velocity" hidden><label>目标速度（rpm）<input name="rpm" type="number" value="10" min="-10" max="10" step="0.1"></label>
             <p class="target-note">正负数决定方向，达到软限位后停止。</p></div>
           <div class="enable-actions"><button class="enable-on" data-action="start" disabled>启动并保持</button>
             <button type="button" class="enable-off" data-action="stop" disabled>立即停止 / 关闭 EN</button></div>
