@@ -1,0 +1,44 @@
+[
+  {
+    "attempt": 1,
+    "browser_duration_ms": 6572,
+    "mcu_minimum_duration_ms": 6400,
+    "mid_deg": 81.03674525667043,
+    "end_deg": 131.04899545395875,
+    "travel_deg": 50.01225019728832,
+    "electrical_deviation_rad": 0.173036281262533,
+    "forward_endpoint_hold_ms": 600,
+    "return_endpoint_hold_ms": 600,
+    "direction": -1,
+    "ready": true,
+    "fault": "NONE"
+  },
+  {
+    "attempt": 2,
+    "browser_duration_ms": 6540,
+    "mcu_minimum_duration_ms": 6400,
+    "mid_deg": 81.00353004673666,
+    "end_deg": 131.01640179123945,
+    "travel_deg": 50.01287174450279,
+    "electrical_deviation_rad": 0.17296034494508916,
+    "forward_endpoint_hold_ms": 600,
+    "return_endpoint_hold_ms": 600,
+    "direction": -1,
+    "ready": true,
+    "fault": "NONE"
+  },
+  {
+    "attempt": 3,
+    "browser_duration_ms": 6556,
+    "mcu_minimum_duration_ms": 6403,
+    "mid_deg": 80.99297057427982,
+    "end_deg": 131.0326986225991,
+    "travel_deg": 50.039728048319276,
+    "electrical_deviation_rad": 0.16967922845949346,
+    "forward_endpoint_hold_ms": 600,
+    "return_endpoint_hold_ms": 600,
+    "direction": -1,
+    "ready": true,
+    "fault": "NONE"
+  }
+]

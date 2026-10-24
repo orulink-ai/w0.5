@@ -76,7 +76,7 @@
           <button class="enable-on" data-action="calibrate" disabled>校准 FOC · 转轴会运动</button>
           <button class="secondary" data-action="zero" disabled>当前位置设为零点</button>
         </div>
-        <p class="target-note">校准会让转轴轻微转动。校准完成后再设零、选择模式并手动开始。当前裸轴不执行机械寻限位。</p>
+        <p class="target-note">校准约需6.4秒，转轴会正反转并在端点停留。校准完成后再设零、选择模式并手动开始。当前裸轴不执行机械寻限位。</p>
         <form data-form="limits" class="cl-limits">
           <label>左软限位（°）<input name="min_deg" type="number" value="-90" required step="1"></label>
           <label>右软限位（°）<input name="max_deg" type="number" value="90" required step="1"></label>

@@ -219,15 +219,71 @@ void testDebugTrace() {
 void testAlignment() {
   for(int direction:{-1,1}) {
     Alignment a;assert(a.start(0,2.3f));
-    for(unsigned t=0;t<=1000;t+=2)a.tick(t,2.3f+static_cast<float>(direction)*t/1000.f*kTwoPi/7);
-    for(unsigned t=1002;t<=2002;t+=2)a.tick(t,2.3f+static_cast<float>(direction)*(2002-t)/1000.f*kTwoPi/7);
-    a.tick(2204,2.3f);a.tick(2905,2.3f);
+    for(uint32_t t=0;t<=8000&&a.active();t+=2) {
+      const float raw=2.3f+direction*(a.output(t).electrical_angle-3*kHalfPi)/7;
+      a.tick(t,raw);
+    }
     assert(a.done()&&a.direction()==direction);
     assert(std::fabs(a.zeroElectrical()-normalize(direction*7*2.3f))<.0001f);
   }
   Alignment stalled;stalled.start(0,0);
-  for(unsigned t=0;t<3300;t+=2)stalled.tick(t,0);
+  for(unsigned t=0;t<8000;t+=2)stalled.tick(t,0);
   assert(stalled.failed());
+}
+
+void testAlignmentEndpointDwellAndFailures() {
+  Alignment a;assert(a.start(0,2.3f));
+  const float base=3*kHalfPi,stroke=kTwoPi/7;
+  assert(a.output(400).electrical_angle==base);a.tick(500,2.3f);
+  a.tick(2500,2.3f+stroke-.12f); // Rotor still following the stopped field.
+  assert(a.output(3099).electrical_angle==base+kTwoPi);
+  a.tick(3099,2.3f+stroke-.02f);assert(a.active()&&!a.failed());
+  a.tick(3100,2.3f+stroke);
+  a.tick(5100,2.3f+.12f); // Do not sample until the return endpoint settles.
+  assert(a.output(5699).electrical_angle==base);
+  a.tick(5699,2.3f+.02f);assert(a.active()&&!a.failed());
+  a.tick(5700,2.3f);assert(a.active()&&!a.failed());
+  a.tick(6400,2.3f);assert(a.done()&&a.direction()==1);
+  for(int pairs:{3,5,9,14}) {
+    Alignment wrong;assert(wrong.start(0,0));
+    for(uint32_t t=0;t<8000&&wrong.active();t+=2)
+      wrong.tick(t,(wrong.output(t).electrical_angle-base)/pairs);
+    assert(wrong.failed()&&!wrong.done());
+  }
+  for(float raw:{NAN,INFINITY,-INFINITY}) {
+    Alignment invalid;assert(!invalid.start(0,raw));
+    assert(invalid.start(0,0));invalid.tick(2,raw);assert(invalid.failed());
+  }
+  for(uint32_t stop_at:{0U,600U,2600U,3200U,5200U,5800U}) {
+    Alignment stopped;assert(stopped.start(0,0));
+    for(uint32_t t=0;t<=stop_at;t+=2)
+      stopped.tick(t,(stopped.output(t).electrical_angle-base)/7);
+    stopped.abort();assert(!stopped.active()&&!stopped.done()&&!stopped.output(stop_at).energize);
+  }
+  Alignment delayed;assert(delayed.start(0,0));delayed.tick(7000,0);
+  assert(delayed.active()&&!delayed.done()&&delayed.output(7000).electrical_angle==base);
+  delayed.tick(9000,0);assert(delayed.failed()&&!delayed.done());
+}
+
+void testAlignmentWithRotorLag() {
+  // A first-order rotor keeps moving after the electrical sweep reaches its
+  // endpoint. Sampling immediately at reversal incorrectly rejects 7 pairs.
+  for(int direction:{-1,1}) {
+    for(uint32_t started:{0U,UINT32_MAX-100U}) {
+      Alignment alignment;float rotor=2.3f;
+      assert(alignment.start(started,rotor));
+      for(uint32_t elapsed=0;elapsed<=8000&&alignment.active();elapsed+=2) {
+        const uint32_t now=started+elapsed;
+        const auto output=alignment.output(now);
+        const float target=2.3f+direction*(output.electrical_angle-3*kHalfPi)/7;
+        rotor+=(target-rotor)*(.002f/(.130f+.002f));
+        alignment.tick(now,rotor);
+      }
+      assert(alignment.done()&&!alignment.failed());
+      assert(alignment.direction()==direction);
+      assert(std::fabs(alignment.zeroElectrical()-normalize(direction*7*2.3f))<.001f);
+    }
+  }
 }
 
 void testManualFaultReset() {
@@ -362,6 +418,8 @@ void testMotorTuningIsolation() {
 }
 
 int main() {
+  testAlignmentWithRotorLag();
+  testAlignmentEndpointDwellAndFailures();
   testMotorTuningIsolation();
   testCalibrationRecovery();
   testRelaxedOverspeed();

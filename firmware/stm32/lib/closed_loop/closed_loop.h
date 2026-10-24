@@ -195,33 +195,54 @@ struct AlignmentOutput {bool energize=false; float electrical_angle=0;};
 class Alignment {
  public:
   bool start(uint32_t now,float raw) {
-    if(active_) return false;
-    started_=now; mid_=end_=raw; active_=true;done_=failed_=false;direction_=0;phase_=0;return true;
+    if(active_||!std::isfinite(raw)) return false;
+    started_=phase_started_=now;mid_=end_=raw;zero_=0;
+    active_=true;done_=failed_=false;direction_=0;phase_=Phase::InitialHold;return true;
   }
-  void abort() {active_=false;failed_=true;}
+  void abort() {active_=done_=false;failed_=true;}
   void tick(uint32_t now,float raw) {
     if(!active_) return;
-    const uint32_t t=now-started_;
-    if(t>=4000) {abort();return;}
-    if(phase_==0&&t>=1000) {mid_=raw;phase_=1;}
-    if(phase_==1&&t>=2002) {end_=raw;phase_=2;}
-    if(phase_==2&&t>=2202) {
-      const float moved=mid_-end_;
-      // Reject stalled rotor and wrong pp rather than accepting a guess.
-      if(std::fabs(std::fabs(moved)*7-kTwoPi)>.8f) {abort();return;}
-      direction_=moved>0?1:-1;phase_=3;
-    }
-    if(phase_==3&&t>=2902) {
-      zero_=normalize(direction_*7*normalize(raw));
-      active_=false;done_=true;
+    if(!std::isfinite(raw)||static_cast<uint32_t>(now-started_)>=9000) {abort();return;}
+    const uint32_t held=now-phase_started_;
+    // One transition per tick: a delayed poll must not skip endpoint dwell or
+    // sample a rotor after the command has already reversed direction.
+    switch(phase_) {
+      case Phase::InitialHold:
+        if(held>=500) advance(Phase::ForwardSweep,now);
+        break;
+      case Phase::ForwardSweep:
+        if(held>=kSweepMs) advance(Phase::ForwardHold,now);
+        break;
+      case Phase::ForwardHold:
+        if(held>=kEndpointHoldMs) {mid_=raw;advance(Phase::ReverseSweep,now);}
+        break;
+      case Phase::ReverseSweep:
+        if(held>=kSweepMs) advance(Phase::ReverseHold,now);
+        break;
+      case Phase::ReverseHold:
+        if(held>=kEndpointHoldMs) {
+          end_=raw;
+          const float moved=mid_-end_;
+          // Keep the existing 7-pair travel tolerance; a stalled rotor or
+          // incorrect pole count must still fail after settling.
+          if(std::fabs(std::fabs(moved)*7-kTwoPi)>.8f) {abort();return;}
+          direction_=moved>0?1:-1;advance(Phase::ZeroHold,now);
+        }
+        break;
+      case Phase::ZeroHold:
+        if(held>=700) {
+          zero_=normalize(direction_*7*normalize(raw));active_=false;done_=true;
+        }
+        break;
     }
   }
   AlignmentOutput output(uint32_t now=0) const {
     if(!active_) return {};
-    const uint32_t t=now-started_;
+    const float progress=std::min(1.0f,static_cast<uint32_t>(now-phase_started_)/float(kSweepMs));
     float fraction=0;
-    if(t<=1000) fraction=t/1000.f;
-    else if(t<=2002) fraction=(2002-t)/1000.f;
+    if(phase_==Phase::ForwardSweep) fraction=progress;
+    else if(phase_==Phase::ForwardHold) fraction=1;
+    else if(phase_==Phase::ReverseSweep) fraction=1-progress;
     return {true,3*kHalfPi+kTwoPi*fraction};
   }
   bool active()const{return active_;}
@@ -230,8 +251,11 @@ class Alignment {
   int direction()const{return direction_;}
   float zeroElectrical()const{return zero_;}
  private:
+  enum class Phase {InitialHold,ForwardSweep,ForwardHold,ReverseSweep,ReverseHold,ZeroHold};
+  static constexpr uint32_t kSweepMs=2000,kEndpointHoldMs=600;
+  void advance(Phase phase,uint32_t now) {phase_=phase;phase_started_=now;}
   bool active_=false,done_=false,failed_=false;
-  unsigned phase_=0;int direction_=0;uint32_t started_=0;
+  Phase phase_=Phase::InitialHold;int direction_=0;uint32_t started_=0,phase_started_=0;
   float mid_=0,end_=0,zero_=0;
 };
 } // namespace closed_loop

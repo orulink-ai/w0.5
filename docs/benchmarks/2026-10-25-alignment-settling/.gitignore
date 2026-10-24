@@ -1,0 +1,10 @@
+*.jsonl
+*.csv
+swd-raw.log
+*browser.log
+before-upload.json
+before-test.json
+after-test.json
+after-position.json
+final-state.json
+capture-swd.tcl
