@@ -22,6 +22,8 @@ STM32 负责运动状态机、控制周期、反馈采集、电机驱动和本�
 
 ## 固件内部边界
 
+摄像头调试模块独立采用 ESP32-P4 + IMX708，位于 `firmware/esp32/examples/imx708_usb/`，电脑预览与检测位于 `tools/camera_facetrack/`。USB 视频链路不属于 ESP32-C6 Mini / STM32 的运动命令协议，当前没有自动控制电机。后续喇叭验证也采用独立示例目录，不与摄像头共用构建输出或自动烧录入口。详见 [摄像头技术说明](camera-imx708.md) / [English](camera-imx708.en.md)。
+
 两端均按 application（业务状态机）、domain（平台无关逻辑）、drivers/adapters（硬件与 SDK 适配）拆分。
 只在确认硬件及构建系统后创建对应源码目录，避免空壳接口锁定实现。
 

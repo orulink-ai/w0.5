@@ -23,3 +23,6 @@
 !.env.example
 .venv/
 __pycache__/
+
+# External camera SDK checkout, downloaded dependencies and diagnostics
+.camera-sdk/

@@ -1,5 +1,13 @@
 # 开发工具
 
+## 摄像头 / Camera
+
+仓库根目录统一运行 `python tools/camera.py <命令>`：`setup` 安装、`run` 正常启动、`dev` 热更新、`test` 回归测试、`check-usb --port COM15 --seconds 25` 传输诊断、`focus --port COM15` 实验性对焦诊断、`prepare-firmware` 准备固定版本源码、`test-firmware --clang <主机编译器>` 主机 C 测试、`build-firmware` 在已激活的 ESP-IDF 环境中编译。端口可用 `--port` 指定，GUI 也可用 `--source 0` 测试本机摄像头；脚本不执行烧录。
+
+English: `python tools/camera.py` wraps installation, normal/hot-reload preview, regression tests, bounded USB diagnostics, experimental focus scanning, pinned firmware preparation, host C tests and firmware building. Specify `--port` for hardware or `--source 0` for a PC webcam. No command flashes hardware automatically. See [中文](camera_facetrack/README.md) / [English](camera_facetrack/README.en.md).
+
+## STM32
+
 `stm32.py` 提供独立的 STM32 AS5600 PWM 示例入口；在仓库根目录运行：
 
 ```sh
