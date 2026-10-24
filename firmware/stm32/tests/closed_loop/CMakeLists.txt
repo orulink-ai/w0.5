@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(closed_loop_tests LANGUAGES CXX)
+enable_testing()
+add_executable(closed_loop_tests test_closed_loop.cpp)
+target_compile_features(closed_loop_tests PRIVATE cxx_std_17)
+target_compile_options(closed_loop_tests PRIVATE -Wall -Wextra -Werror)
+target_include_directories(closed_loop_tests PRIVATE ../../lib/closed_loop)
+add_test(NAME closed_loop COMMAND closed_loop_tests)

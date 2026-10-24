@@ -14,6 +14,7 @@ from telemetry import TelemetryStore
 from commands import CommandError, validate_target
 from enable_commands import validate_enabled
 from motor_commands import validate_action
+from closed_loop_commands import validate_foc
 
 STATIC = Path(__file__).resolve().parent / "static"
 
@@ -64,6 +65,8 @@ class SerialReader:
     def send_target(self, degrees):
         degrees = validate_target(degrees)
         with self._control:
+            if self.store.closed_loop.snapshot()["supported"]:
+                raise CommandError("当前为闭环固件，请使用闭环工作台；旧控制入口已禁用。")
             if self._serial is None or not self._serial.is_open:
                 raise CommandError("串口未连接。")
             request_id, packet = self.store.control.begin(
@@ -79,6 +82,8 @@ class SerialReader:
     def send_enable(self, enabled):
         enabled = validate_enabled(enabled)
         with self._control:
+            if self.store.closed_loop.snapshot()["supported"]:
+                raise CommandError("当前为闭环固件，请使用闭环工作台；旧控制入口已禁用。")
             if self._serial is None or not self._serial.is_open:
                 raise CommandError("串口未连接。")
             request_id, packet = self.store.enable.begin(
@@ -94,6 +99,8 @@ class SerialReader:
     def send_motor(self, action):
         action = validate_action(action)
         with self._control:
+            if self.store.closed_loop.snapshot()["supported"]:
+                raise CommandError("当前为闭环固件，请使用闭环工作台；旧控制入口已禁用。")
             if self._serial is None or not self._serial.is_open:
                 raise CommandError("串口未连接。")
             state = self.store.snapshot()
@@ -106,6 +113,42 @@ class SerialReader:
                 self.store.motor.fail(request_id, f"串口发送失败：{error}")
                 raise CommandError("串口发送失败，电机请求未确认。") from error
             self.store.motor.wait(request_id)
+
+    def send_foc(self, payload):
+        payload = validate_foc(payload)
+        # Waiting outside the transport lock lets STOP preempt an unacknowledged
+        # calibration/start immediately. Only writing and connection ownership
+        # are serialized; commands are never automatically retried.
+        with self._control:
+            if self._serial is None or not self._serial.is_open:
+                raise CommandError("串口未连接。")
+            request_id, packet = self.store.closed_loop.begin(
+                payload, self.store.snapshot()["signal"] == "valid")
+            try:
+                if self._serial.write(packet) != len(packet):
+                    raise serial.SerialTimeoutException("Incomplete FOC write")
+            except (OSError, serial.SerialException) as error:
+                self.store.closed_loop.fail(request_id, f"串口发送失败：{error}")
+                raise CommandError("串口发送失败，闭环请求未确认。") from error
+        self.store.closed_loop.wait(request_id)
+
+    def send_foc_heartbeat(self, payload):
+        if type(payload) is not dict or set(payload) != {'run_id'}:
+            raise CommandError("心跳只接受 run_id。")
+        run_id = payload['run_id']
+        with self._control:
+            if self._serial is None or not self._serial.is_open:
+                self.store.closed_loop.clear_owner()
+                raise CommandError("串口未连接，运动租约已失效。")
+            packet = self.store.closed_loop.heartbeat(run_id)
+            try:
+                if self._serial.write(packet) != len(packet):
+                    raise serial.SerialTimeoutException("Incomplete FOC heartbeat write")
+            except (OSError, serial.SerialException) as error:
+                self.store.closed_loop.clear_owner()
+                raise CommandError("运动心跳发送失败，租约已释放。") from error
+            self.store.closed_loop.heartbeat_written(run_id)
+        return {"ok": True, "run_id": run_id}
 
     def _read(self, connection, stop):
         pending = bytearray()
@@ -168,6 +211,10 @@ def make_server(reader, store, port=8840):
             else:
                 files = {"/": ("index.html", "text/html; charset=utf-8"),
                          "/app.js": ("app.js", "application/javascript; charset=utf-8"),
+                         "/api.js": ("api.js", "application/javascript; charset=utf-8"),
+                         "/components/legacy-controls.js": ("components/legacy-controls.js", "application/javascript; charset=utf-8"),
+                         "/components/closed-loop.js": ("components/closed-loop.js", "application/javascript; charset=utf-8"),
+                         "/components/lease-keeper.js": ("components/lease-keeper.js", "application/javascript; charset=utf-8"),
                          "/style.css": ("style.css", "text/css; charset=utf-8")}
                 if path not in files:
                     self.respond(404, {"error": "Not found"})
@@ -214,6 +261,11 @@ def make_server(reader, store, port=8840):
                     reader.send_enable(data.get("enabled"))
                 elif self.path == "/api/motor":
                     reader.send_motor(data.get("action"))
+                elif self.path == "/api/foc":
+                    reader.send_foc(data)
+                elif self.path == "/api/foc/heartbeat":
+                    self.respond(200, reader.send_foc_heartbeat(data))
+                    return
                 else:
                     self.respond(404, {"error": "Not found"})
                     return

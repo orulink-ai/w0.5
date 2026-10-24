@@ -19,7 +19,7 @@ def main() -> None:
     parser.add_argument("--port", help="Serial device path (required for monitor)")
     parser.add_argument("--env", default="g431_as5600_usb",
                         choices=("g431_as5600_usb", "g431_as5600_uart", "g431_pwm_loopback",
-                                 "g431_motor_jog", "g431_enable_uart", "g431_motor_gpio"))
+                                 "g431_motor_jog", "g431_enable_uart", "g431_motor_gpio", "g431_closed_loop"))
     args = parser.parse_args()
     if args.action == "dashboard":
         python = ROOT / ".venv/bin/python"
@@ -31,7 +31,7 @@ def main() -> None:
         run(*command)
         return
     if args.action == "test":
-        for suite in ("as5600_pwm", "angle_target", "motor_jog", "enable_control", "motor_gpio"):
+        for suite in ("as5600_pwm", "angle_target", "motor_jog", "enable_control", "motor_gpio", "closed_loop"):
             source = ROOT / "firmware/stm32/tests" / suite
             build = source / "build"
             run("cmake", "-S", str(source), "-B", str(build), "-G", "Ninja")

@@ -2,7 +2,7 @@
 
 采用 monorepo 管理 ESP32 主控固件、STM32 运动控制固件、共享通信协议和集成测试。
 
-已实现 STM32G431CBT6 的 AS5600 PWM 读角、PB5 使能和网页手动低速点动，采用 STM32duino + PlatformIO + SimpleFOC。单轴硬件为 12V GB2806（7 极对）、DengFOCmini MP6536 与 AS5600；编码器及使能已实测，用户已确认电机能正常运动。当前点动为速度开环，角度闭环定位尚未实现；双电机和 ESP32-C6 Mini 联调仍待推进。
+已实现 STM32G431CBT6 的 AS5600 PWM 反馈、单轴位置／速度闭环及网页持续控制，采用 STM32duino + PlatformIO + SimpleFOC。单轴硬件为 12V GB2806（7 极对）、DengFOCmini MP6536 与 AS5600。位置按设定速度移动并持续保持，速度模式支持正反转；页面通过运行租约维持控制，失联停机，不再采用固定5秒运行截止。使用方法、架构与阶段记录见 [单轴闭环控制](docs/closed-loop-architecture.md)。手拨交互、双电机和 ESP32-C6 Mini 联调不在本阶段范围。
 
 ## 目录
 

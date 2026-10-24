@@ -11,9 +11,13 @@
 | 跨板及系统集成测试 | `tests/integration/` | UART 联调、断线与重启 |
 | 临时探索与验证 | `experiments/<主题>/` | 候选算法、尚未整理的原型 |
 
-AS5600 PWM、目标命令解析、手动 EN 点动、PB5 使能与 PB5 门控点动已有实现和五套主机测试，运行 `python3 tools/stm32.py test`。当前 `g431_motor_gpio` 已烧录校验、报告 READY，默认 PB5 低，TIM1 25kHz、三路占空比零；实际转动留给操作者显式点击，不能据已就绪声称电机已转。步骤见 `firmware/stm32/examples/encoder_read/MOTOR_GPIO.md`；旧手动 EN 环境记录见 `MOTOR_JOG.md`。
+AS5600 PWM、目标命令解析、手动 EN 点动、PB5 使能、PB5 门控点动和位置／速度闭环已有六套主机测试，运行 `python3 tools/stm32.py test`。当前实机使用 `g431_closed_loop`；旧 `g431_motor_gpio` 保留为独立验证环境，步骤见 `firmware/stm32/examples/encoder_read/MOTOR_GPIO.md`，旧手动 EN 环境记录见 `MOTOR_JOG.md`。不同环境的 READY 只表示各自准备状态，不代表电机已实际运动。
 
-本地角度调试台的测量解析、目标/使能/点动请求确认、高水位防重放、超时、HTTP 和串口生命周期测试位于 `tools/tests/`，使用 `.venv/bin/python -m unittest discover -s tools/tests -v`。当前 40 项测试通过；这些测试不控制真实电机，串口集成使用系统伪终端。
+本地角度调试台的测量解析、目标/使能/点动请求确认、高水位防重放、超时、HTTP 和串口生命周期测试位于 `tools/tests/`，使用 `.venv/bin/python -m unittest discover -s tools/tests -v`。2026-10-24 的工作树共 61 项 Python 测试通过，其中闭环专项 18 项；总数包含并行开发的机器人页面测试。这些测试不控制真实电机，串口集成使用系统伪终端。
+
+闭环页面另运行 `node tools/tests/test_closed_loop_ui.js` 和 `node tools/tests/test_foc_lease_keeper.js`，覆盖显式启动、停止抢占、迟到响应、刷新与运行租约失效。固件纯逻辑测试覆盖轨迹、坐标、模式、限位和租约到期不可恢复；需分别构建 `g431_closed_loop` 与旧 `g431_motor_gpio`，避免入口或链接回归。
+
+本阶段已完成实物位置正反向、速度正反向、超过 5 秒持续保持，以及网页刷新后租约超时停机。实物参数、误差及尚未验证的边界见 [单轴基础控制交付记录](releases/stm32-basic-control.md)。主机测试通过不等于速度纹波、定位精度或热稳定性已全面验收。
 
 ## 新增上板测试功能
 

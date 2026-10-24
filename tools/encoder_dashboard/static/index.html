@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>角度调试台 · AS5600 · W0.5</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="/api.js" defer></script>
+  <script src="/components/legacy-controls.js" defer></script>
+  <script src="/components/lease-keeper.js" defer></script>
+  <script src="/components/closed-loop.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
@@ -14,7 +18,7 @@
   </header>
   <main>
     <section class="page-heading">
-      <div><div class="eyebrow">ANGLE WORKBENCH / 01</div><h1>AS5600 角度调试台</h1><p>实时查看转轴角度，选择目标并确认芯片接收。</p></div>
+      <div><div class="eyebrow">ANGLE WORKBENCH / 01</div><h1>AS5600 角度调试台</h1><p>实时查看编码器反馈，校准并调试闭环运动。</p></div>
       <div id="signal-badge" class="badge" role="status"><span class="dot"></span><span id="signal-label">等待连接</span></div>
     </section>
     <div class="workspace">
@@ -38,7 +42,8 @@
             <div class="dial" id="dial" aria-hidden="true"><span class="dial-top">0°</span><span class="dial-right">90°</span><span class="dial-bottom">180°</span><span class="dial-left">270°</span><div class="dial-inner"></div><div class="needle" id="needle" hidden><i></i></div><div class="dial-center"></div></div>
           </div>
         </section>
-        <section class="enable-card card" aria-labelledby="enable-heading">
+        <section id="closed-loop-panel" class="closed-loop-card card" aria-label="闭环运动工作台" hidden></section>
+        <section data-legacy-control class="enable-card card" aria-labelledby="enable-heading">
           <div class="target-heading"><div><div class="section-label" id="enable-heading">驱动使能</div><p>EN → PB5 · 高电平开启，低电平关闭</p></div><span id="enable-badge" class="motor-badge">状态未知</span></div>
           <div class="enable-actions">
             <button id="enable-on" class="enable-on" disabled>开启使能 · 最多 5 秒</button>
@@ -48,7 +53,7 @@
           <p id="enable-error" class="error" role="alert" hidden></p>
           <p class="target-note">单独开启使能不会命令电机转动。关闭、超时或复位后不会自动重新开启。</p>
         </section>
-        <section class="enable-card card" aria-labelledby="motor-heading">
+        <section data-legacy-control class="enable-card card" aria-labelledby="motor-heading">
           <div class="target-heading"><div><div class="section-label" id="motor-heading">手动低速转动</div><p>0.5 rad/s · 每次约 3 秒 · 1V 调制电压</p></div><span id="motion-badge" class="motor-badge">等待点动固件</span></div>
           <div class="enable-actions">
             <button id="motor-jog" class="enable-on" disabled>低速转动 · 3 秒</button>
@@ -58,7 +63,7 @@
           <p id="motion-error" class="error" role="alert" hidden></p>
           <p class="target-note">由你点击开始，程序自动开启 EN，结束后关闭 EN。无需先点“开启使能”；确认 EN 已关闭后可以再次手动点动。首次测试请空载，并保持可随时关闭 12V。</p>
         </section>
-        <section class="target-card card" aria-labelledby="target-heading">
+        <section data-legacy-control class="target-card card" aria-labelledby="target-heading">
           <div class="target-heading"><div><div class="section-label" id="target-heading">目标角度</div><p>单圈绝对角度 · 与上方编码器读数使用同一零位</p></div><span class="motor-badge" id="motor-badge">等待固件状态</span></div>
           <div class="preset-grid" aria-label="目标角度预设">
             <button class="angle-preset" data-angle="0" aria-pressed="false" disabled>0<span>°</span></button>

@@ -6,6 +6,7 @@ import time
 from commands import TargetChannel
 from enable_commands import EnableChannel
 from motor_commands import MotorChannel
+from closed_loop_commands import ClosedLoopChannel
 
 
 def parse_line(line):
@@ -47,6 +48,7 @@ class TelemetryStore:
         self.control = TargetChannel(clock)
         self.enable = EnableChannel(clock)
         self.motor = MotorChannel(clock)
+        self.closed_loop = ClosedLoopChannel(clock)
         self._enable_seen = False
 
     def set_connection(self, connected, port="", error=""):
@@ -57,6 +59,7 @@ class TelemetryStore:
             self.control.reset(connected)
             self.enable.reset(connected)
             self.motor.reset(connected)
+            self.closed_loop.reset(connected)
             self._enable_seen = False
             if connected:
                 self._port = port
@@ -70,8 +73,9 @@ class TelemetryStore:
         reading = parse_line(line)
         enable_status = self.enable.consume(line)
         motor_status = self.motor.consume(line)
+        closed_loop_status = self.closed_loop.consume(line)
         with self._lock:
-            if (enable_status or motor_status) and not self._enable_seen:
+            if (enable_status or motor_status or closed_loop_status) and not self._enable_seen:
                 self._enable_seen = True
                 self.control.reset(self._connected)
                 self._jog = self._jog_at = None
@@ -115,4 +119,5 @@ class TelemetryStore:
                     "age_ms": None if age is None else round(age * 1000),
                     "samples": self._samples, "valid_samples": self._valid_samples,
                     "logs": list(self._logs), "control": self.control.snapshot(), "jog": jog,
-                    "enable": self.enable.snapshot(), "motor": self.motor.snapshot()}
+                    "enable": self.enable.snapshot(), "motor": self.motor.snapshot(),
+                    "closed_loop": self.closed_loop.snapshot()}

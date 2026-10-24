@@ -850,3 +850,29 @@ footer .dot {
   .angle-preset { min-height:58px; font-size:24px; }
   .angle-preset span { font-size:16px; }
 }
+
+/* Closed-loop workstation owns these styles; legacy controls stay isolated. */
+[hidden] { display:none!important; }
+.closed-loop-card { padding:24px 28px; min-width:0; }
+.cl-readouts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:20px 0; }
+.cl-readouts div { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.cl-readouts span { color:var(--muted); font-size:11px; }
+.cl-readouts strong { font-size:17px; font-variant-numeric:tabular-nums; }
+.closed-loop-card label { display:flex; flex-direction:column; gap:8px; color:#526e80; font-size:12px; }
+.closed-loop-card input { width:100%; min-width:0; border:1px solid var(--border); border-radius:8px; padding:11px; box-sizing:border-box; font:inherit; color:#314f63; background:#fff; }
+.cl-limits { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:end; margin-top:18px; }
+.cl-limits button { min-height:40px; padding:10px; border-radius:8px; }
+.cl-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin:22px 0 18px; gap:6px; }
+.cl-tabs button, .cl-presets button { background:#f7fafb; color:#526e80; border:1px solid var(--border); border-radius:8px; min-height:40px; font-size:12px; }
+.cl-tabs button[aria-pressed="true"] { background:#e5f5ef; color:#00755f; border-color:#4eaf9a; }
+.cl-presets { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:12px; }
+.cl-range { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.cl-range p { grid-column:1/-1; }
+@media(max-width:760px) {
+  .closed-loop-card { padding:20px; }
+  .closed-loop-card>.target-heading { flex-wrap:wrap; }
+  .cl-limits { grid-template-columns:1fr 1fr; }
+  .cl-limits button { grid-column:1/-1; }
+  .cl-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .cl-readouts strong { font-size:14px; }
+}
