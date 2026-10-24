@@ -11,7 +11,9 @@
 | 跨板及系统集成测试 | `tests/integration/` | UART 联调、断线与重启 |
 | 临时探索与验证 | `experiments/<主题>/` | 候选算法、尚未整理的原型 |
 
-当前仅建立目录与文档；各示例都尚无实现、构建命令或实机测试结果。
+AS5600 PWM、目标命令解析、手动 EN 点动、PB5 使能与 PB5 门控点动已有实现和五套主机测试，运行 `python3 tools/stm32.py test`。当前 `g431_motor_gpio` 已烧录校验、报告 READY，默认 PB5 低，TIM1 25kHz、三路占空比零；实际转动留给操作者显式点击，不能据已就绪声称电机已转。步骤见 `firmware/stm32/examples/encoder_read/MOTOR_GPIO.md`；旧手动 EN 环境记录见 `MOTOR_JOG.md`。
+
+本地角度调试台的测量解析、目标/使能/点动请求确认、高水位防重放、超时、HTTP 和串口生命周期测试位于 `tools/tests/`，使用 `.venv/bin/python -m unittest discover -s tools/tests -v`。当前 40 项测试通过；这些测试不控制真实电机，串口集成使用系统伪终端。
 
 ## 新增上板测试功能
 

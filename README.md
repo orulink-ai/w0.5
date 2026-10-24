@@ -2,7 +2,7 @@
 
 采用 monorepo 管理 ESP32 主控固件、STM32 运动控制固件、共享通信协议和集成测试。
 
-当前阶段为架构骨架，尚未包含可烧录固件。已确认 ESP32-C6 Mini、STM32G431C、UART、两个无刷电机与 AS5600 编码器；完整料号、驱动及接线方案待确认。
+已实现 STM32G431CBT6 的 AS5600 PWM 读角、PB5 使能和网页手动低速点动，采用 STM32duino + PlatformIO + SimpleFOC。单轴硬件为 12V GB2806（7 极对）、DengFOCmini MP6536 与 AS5600；编码器及使能已实测，用户已确认电机能正常运动。当前点动为速度开环，角度闭环定位尚未实现；双电机和 ESP32-C6 Mini 联调仍待推进。
 
 ## 目录
 
@@ -35,6 +35,6 @@ docs/                  # 架构、测试及硬件验证说明
 - 对协议、状态机和故障逻辑先写失败测试，再实现；上板验证记录硬件版本和参数。
 - 板间采用 UART；协议语义与 UART 收发、分帧适配分离。
 
-测试功能放置与新增方法见 [测试说明](docs/testing.md)。当前示例均为待实现的文档骨架。
+测试功能放置与新增方法见 [测试说明](docs/testing.md)。[AS5600 PWM 示例](firmware/stm32/examples/encoder_read/README.md)采用 STM32duino + PlatformIO + SimpleFOC，其他示例仍为文档骨架。
 
 详见 [架构说明](docs/architecture.md) 与 [硬件验证清单](docs/bringup.md)。

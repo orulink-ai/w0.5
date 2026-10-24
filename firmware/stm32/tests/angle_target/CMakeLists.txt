@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(angle_target_tests LANGUAGES CXX)
+enable_testing()
+add_executable(angle_target_tests test_angle_target.cpp)
+target_compile_features(angle_target_tests PRIVATE cxx_std_17)
+target_compile_options(angle_target_tests PRIVATE -Wall -Wextra -Werror)
+target_include_directories(angle_target_tests PRIVATE ../../lib/angle_target)
+add_test(NAME angle_target COMMAND angle_target_tests)

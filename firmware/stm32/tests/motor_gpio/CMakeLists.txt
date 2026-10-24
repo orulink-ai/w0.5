@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(motor_gpio_tests LANGUAGES CXX)
+enable_testing()
+add_executable(motor_gpio_tests test_motor_gpio.cpp)
+target_compile_features(motor_gpio_tests PRIVATE cxx_std_17)
+target_compile_options(motor_gpio_tests PRIVATE -Wall -Wextra -Werror)
+target_include_directories(motor_gpio_tests PRIVATE ../../lib/motor_gpio ../../lib/motor_jog)
+add_test(NAME motor_gpio COMMAND motor_gpio_tests)

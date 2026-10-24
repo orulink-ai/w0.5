@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>角度调试台 · AS5600 · W0.5</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="W0.5 调试主页"><span class="brand-icon">W</span> W0.5 <span class="brand-lab">/ LAB</span></a>
+    <div class="header-right"><span class="local-tag"><span class="dot"></span> 本机串口调试</span><span class="version">STM32G431 · AS5600</span></div>
+  </header>
+  <main>
+    <section class="page-heading">
+      <div><div class="eyebrow">ANGLE WORKBENCH / 01</div><h1>AS5600 角度调试台</h1><p>实时查看转轴角度，选择目标并确认芯片接收。</p></div>
+      <div id="signal-badge" class="badge" role="status"><span class="dot"></span><span id="signal-label">等待连接</span></div>
+    </section>
+    <div class="workspace">
+      <aside class="connection card">
+        <div class="section-label"><span class="tiny-icon">↔</span> 串口连接</div>
+        <div class="connection-status"><span id="connection-dot" class="dot"></span><span id="connection-label">未连接</span></div>
+        <label for="port">串口设备</label>
+        <div class="port-row"><select id="port" aria-label="串口设备"><option value="">正在查找串口…</option></select><button id="refresh" class="icon-button" title="刷新串口" aria-label="刷新串口">↻</button></div>
+        <label for="baud">波特率</label><div id="baud" class="fixed-field">115200 <span>8N1</span></div>
+        <button id="connect" class="primary">连接串口 <span>→</span></button>
+        <button id="disconnect" class="secondary" disabled>断开连接</button>
+        <p id="error" class="error" role="alert" hidden></p>
+        <div class="connection-info"><span>当前设备</span><strong id="active-port">—</strong><span>最近数据</span><strong id="sample-age">—</strong></div>
+        <div class="wiring"><div class="eyebrow">接线速查</div><div><span>编码器 OUT / PWM</span><strong>PA0</strong></div><div><span>TTL RXD</span><strong>PA2 / TX</strong></div><div><span>TTL TXD</span><strong>PA3 / RX</strong></div><div><span>驱动 EN</span><strong>PB5 / 高有效</strong></div><div><span>地线</span><strong>GND ↔ GND</strong></div><p>EN 已改由 PB5 控制，与外部 3.3V 断开。TTL 供电脚不接；关闭 EN 不等于切断 12V 电源。</p></div>
+      </aside>
+      <div class="readings">
+        <section class="angle-card card">
+          <div class="angle-heading"><div><div class="section-label">机械角度</div><p>单圈绝对读数 · 0–360°</p></div><span class="chip">AS5600 / PWM</span></div>
+          <div class="angle-content">
+            <div class="angle-value"><span id="angle">—</span><span class="degree">°</span><p id="angle-caption">连接串口后，等待编码器数据</p><div class="sample-meta"><span class="live-dot"></span> 实时采样 <span class="divider">/</span><span id="frame-count">0</span> 帧</div></div>
+            <div class="dial" id="dial" aria-hidden="true"><span class="dial-top">0°</span><span class="dial-right">90°</span><span class="dial-bottom">180°</span><span class="dial-left">270°</span><div class="dial-inner"></div><div class="needle" id="needle" hidden><i></i></div><div class="dial-center"></div></div>
+          </div>
+        </section>
+        <section class="enable-card card" aria-labelledby="enable-heading">
+          <div class="target-heading"><div><div class="section-label" id="enable-heading">驱动使能</div><p>EN → PB5 · 高电平开启，低电平关闭</p></div><span id="enable-badge" class="motor-badge">状态未知</span></div>
+          <div class="enable-actions">
+            <button id="enable-on" class="enable-on" disabled>开启使能 · 最多 5 秒</button>
+            <button id="enable-off" class="enable-off" disabled>关闭使能</button>
+          </div>
+          <p id="enable-status" class="target-status" role="status" aria-live="polite">等待使能固件状态。</p>
+          <p id="enable-error" class="error" role="alert" hidden></p>
+          <p class="target-note">单独开启使能不会命令电机转动。关闭、超时或复位后不会自动重新开启。</p>
+        </section>
+        <section class="enable-card card" aria-labelledby="motor-heading">
+          <div class="target-heading"><div><div class="section-label" id="motor-heading">手动低速转动</div><p>0.5 rad/s · 每次约 3 秒 · 1V 调制电压</p></div><span id="motion-badge" class="motor-badge">等待点动固件</span></div>
+          <div class="enable-actions">
+            <button id="motor-jog" class="enable-on" disabled>低速转动 · 3 秒</button>
+            <button id="motor-stop" class="enable-off" disabled>立即停止</button>
+          </div>
+          <p id="motion-status" class="target-status" role="status" aria-live="polite">等待电机点动固件状态。</p>
+          <p id="motion-error" class="error" role="alert" hidden></p>
+          <p class="target-note">由你点击开始，程序自动开启 EN，结束后关闭 EN。无需先点“开启使能”；确认 EN 已关闭后可以再次手动点动。首次测试请空载，并保持可随时关闭 12V。</p>
+        </section>
+        <section class="target-card card" aria-labelledby="target-heading">
+          <div class="target-heading"><div><div class="section-label" id="target-heading">目标角度</div><p>单圈绝对角度 · 与上方编码器读数使用同一零位</p></div><span class="motor-badge" id="motor-badge">等待固件状态</span></div>
+          <div class="preset-grid" aria-label="目标角度预设">
+            <button class="angle-preset" data-angle="0" aria-pressed="false" disabled>0<span>°</span></button>
+            <button class="angle-preset" data-angle="90" aria-pressed="false" disabled>90<span>°</span></button>
+            <button class="angle-preset" data-angle="180" aria-pressed="false" disabled>180<span>°</span></button>
+            <button class="angle-preset" data-angle="270" aria-pressed="false" disabled>270<span>°</span></button>
+          </div>
+          <div class="target-confirmation"><span>芯片已接收目标</span><strong id="target-value">—</strong></div>
+          <p id="target-status" class="target-status" role="status" aria-live="polite">等待固件状态</p>
+          <p id="target-error" class="error" role="alert" hidden></p>
+          <p class="target-note" id="target-note">等待固件状态；四个目标按钮不会自动启动电机。</p>
+        </section>
+        <section class="metric-grid" aria-label="PWM 测量值">
+          <article class="metric card"><div class="metric-title">PWM 频率 <span>↝</span></div><div class="metric-value"><span id="frequency">—</span><small>Hz</small></div><p>有效信号的输出频率</p></article>
+          <article class="metric card"><div class="metric-title">高电平宽度 <span>⌁</span></div><div class="metric-value"><span id="high">—</span><small>μs</small></div><p>原始测量值，需结合状态判断</p></article>
+          <article class="metric card"><div class="metric-title">PWM 周期 <span>↔</span></div><div class="metric-value"><span id="period">—</span><small>μs</small></div><p>原始测量值，需结合状态判断</p></article>
+        </section>
+        <section class="diagnostics card">
+          <div class="diagnostic-heading"><div class="section-label">接收日志 <span class="subtle">最近 8 条</span></div><span id="valid-count" class="valid-count">有效 0 / 0</span></div>
+          <div id="logs" class="logs" role="log" aria-label="串口原始日志"><p class="empty-log">连接后，这里将显示固件输出的原始数据。</p></div>
+        </section>
+      </div>
+    </div>
+    <footer><span><span class="dot"></span> <span id="motor-footer">等待固件状态</span></span><span>W0.5 / 角度调试台</span></footer>
+  </main>
+</body>
+</html>

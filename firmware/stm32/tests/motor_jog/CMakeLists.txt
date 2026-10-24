@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(motor_jog_tests LANGUAGES CXX)
+enable_testing()
+add_executable(motor_jog_tests test_motor_jog.cpp)
+target_compile_features(motor_jog_tests PRIVATE cxx_std_17)
+target_compile_options(motor_jog_tests PRIVATE -Wall -Wextra -Werror)
+target_include_directories(motor_jog_tests PRIVATE ../../lib/motor_jog)
+add_test(NAME motor_jog COMMAND motor_jog_tests)

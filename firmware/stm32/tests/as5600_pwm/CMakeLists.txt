@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(as5600_pwm_tests LANGUAGES CXX)
+enable_testing()
+add_executable(as5600_pwm_tests test_as5600_pwm.cpp)
+target_compile_features(as5600_pwm_tests PRIVATE cxx_std_17)
+target_compile_options(as5600_pwm_tests PRIVATE -Wall -Wextra -Werror)
+target_include_directories(as5600_pwm_tests PRIVATE ../../lib/as5600_pwm)
+add_test(NAME as5600_pwm COMMAND as5600_pwm_tests)

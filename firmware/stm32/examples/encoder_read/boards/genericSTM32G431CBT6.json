@@ -1,0 +1,27 @@
+{
+  "name": "STM32G431CBT6 LQFP48 (128KB Flash, 32KB SRAM)",
+  "vendor": "ST",
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32g431cb.html",
+  "build": {
+    "core": "stm32",
+    "cpu": "cortex-m4",
+    "mcu": "stm32g431cbt6",
+    "f_cpu": "16000000L",
+    "extra_flags": "-DSTM32G4 -DSTM32G4xx -DSTM32G431xx",
+    "product_line": "STM32G431xx",
+    "variant": "STM32G4xx/G431C(6-8-B)T_G441CBT",
+    "hwids": [["0x0483", "0x5740"]]
+  },
+  "frameworks": ["arduino"],
+  "debug": {
+    "jlink_device": "STM32G431CB",
+    "openocd_target": "stm32g4x",
+    "svd_path": "STM32G431xx.svd"
+  },
+  "upload": {
+    "maximum_ram_size": 32768,
+    "maximum_size": 131072,
+    "protocol": "stlink",
+    "protocols": ["stlink", "jlink", "cmsis-dap"]
+  }
+}

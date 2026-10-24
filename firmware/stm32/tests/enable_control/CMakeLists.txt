@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(enable_control_tests LANGUAGES CXX)
+enable_testing()
+add_executable(enable_control_tests test_enable_control.cpp)
+target_compile_features(enable_control_tests PRIVATE cxx_std_17)
+target_compile_options(enable_control_tests PRIVATE -Wall -Wextra -Werror)
+target_include_directories(enable_control_tests PRIVATE ../../lib/enable_control)
+add_test(NAME enable_control COMMAND enable_control_tests)
