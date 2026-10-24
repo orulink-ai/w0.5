@@ -14,6 +14,9 @@ The application uses installed third-party packages under their respective licen
 | Matplotlib | 3.10.3 | Matplotlib license and bundled notices in installed package |
 | PyAV | 16.1.0 | BSD-3-Clause; installed wheel includes its own FFmpeg component license notices; https://github.com/PyAV-Org/PyAV |
 | pySerial | 3.5 | BSD, installed package license; https://github.com/pyserial/pyserial |
+| MediaPipe (optional) | 1.1.1 | Apache-2.0; installed distribution notices; https://github.com/google-ai-edge/mediapipe |
+| Face Landmarker (optional) | float16 v1 face_landmarker.task | Apache-2.0; Google official model cards linked from https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker ; downloaded and SHA256 verified by mouth_tracking.py |
+| OpenCV contrib (optional) | 4.11.0.86 | OpenCV / wheel notices in isolated .venv-mouth; matching opencv-python build |
 | Python / Tk | Python 3.12 / Tcl-Tk 8.6 | Python and Tcl/Tk licenses supplied with interpreter |
 
 No InsightFace pretrained weights or YOLO weights are included. This table is a component index; retain original license texts when redistributing.

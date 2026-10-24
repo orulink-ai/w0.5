@@ -17,7 +17,7 @@ def validate_command(value):
     action = value.get('action')
     fields = {
         'start': {'volume'}, 'listen': {'volume'}, 'cancel': set(),
-        'configure': {'faceTrigger', 'enabled', 'volume', 'mode'},
+        'configure': {'faceTrigger', 'enabled', 'volume', 'mode', 'mouthAssist'},
         'camera-start': set(), 'camera-stop': set(),
         'test-speaker': set(),
         'rotate': {'turns'}, 'mirror': {'enabled'},
@@ -28,7 +28,7 @@ def validate_command(value):
         raise ValueError('未知命令字段')
     if 'volume' in value and (type(value['volume']) is not int or value['volume'] != 80):
         raise ValueError('开发板音量固定为 80')
-    for field in ('faceTrigger', 'enabled'):
+    for field in ('faceTrigger', 'enabled', 'mouthAssist'):
         if field in value and type(value[field]) is not bool:
             raise ValueError(field + ' 必须为布尔值')
     if value.get('faceTrigger') is False:

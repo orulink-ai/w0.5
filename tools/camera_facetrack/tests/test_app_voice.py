@@ -35,6 +35,19 @@ def app_state(source='serial://COM15', running=True):
 
 
 class AppVoiceTests(unittest.TestCase):
+    def test_mouth_toggle_cancels_old_capture_and_rearms_face_gate(self):
+        state = app_state()
+        state.voice.busy = True
+        state.mouth = Mock()
+        state.mouth.snapshot.return_value = {'enabled': False}
+        state.mouth_enabled = Mock()
+        state.save_view_settings = Mock()
+        state.set_mouth_assist(True)
+        state.voice.cancel.assert_called_once_with(reason='嘴型辅助设置已切换')
+        state.mouth.configure.assert_called_once_with(True)
+        self.assertTrue(state.face_gate.armed)
+        state.save_view_settings.assert_called_once()
+
     def setUp(self):
         broker = patch('app.get_audio_broker', return_value=('tcp://127.0.0.1:12345', 'test-nonce'))
         broker.start()

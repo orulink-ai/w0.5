@@ -16,6 +16,16 @@
 
 ## Windows 安装与运行
 
+### 可选嘴型辅助（local-cascade）
+
+执行 `pwsh -File setup-mouth.ps1` 创建独立 `.venv-mouth`，安装锁定的 MediaPipe Face Landmarker 1.1.1 及摄像头依赖，下载约 3.76MB 的官方 float16 v1 模型并校验 SHA256。然后把私有 `runtime/robot-console/config.json` 的 `cameraPython` 改成 `.venv-mouth/Scripts/python.exe`，执行 `robot-console.ps1 -Action Restart`，在统一网页勾选「嘴型辅助判停（实验）」。原 `.venv` 不需修改，固件和音量 80 不变。
+
+开关默认关闭，保存为 `runtime/view-settings.json` 的 `mouth_assist`。开启后结合声音与目标嘴部动作：可见嘴静止时抑制噪声启动，已检测到至少 200ms 同时有声音与嘴部动作后，嘴部无动作约 900ms 可结束有背景声的一轮；普通静音仍使用 450ms。画面过期超过 500ms、目标丢失或模型不可用时退回音频。切换选项取消当前会话。`configure.mouthAssist` 只接受布尔值；`voice.mouth` 返回启用、可用、活动、目标和原因元数据，通过子进程 stdin 接入，不发送图像或关键点给语音进程。
+
+嘴部推理在主机独立线程约 10 FPS，沿用现有摄像头，选择后锁定最大人脸 ID；目标丢失不自动切给旁观者，所有人脸离场 2 秒后才能重新选择。摄像头重连或旋转清空旧目标。此版本检测开合变化，不能做唇读或消除 ASR 背景噪声；笑、打哈欠、咀嚼、侧脸和遮挡仍可能误判。部署细节、自动化和真实模型验证见相邻 vi-agent 的本地级联文档与验收报告；活动现场效果尚未验收。
+
+### 基础摄像头环境
+
 需要 Python 3.12（含 Tk）、可用的 USB 数据线及 CH343 驱动。端口在设备管理器查看；COM15 只是本机默认值。
 
 ```powershell
@@ -96,6 +106,7 @@ GUI 启动本机 HTTP 服务 `http://127.0.0.1:8791`，提供 `/api/robot/status
 | `serial_video.py` / `board_broker.py` | 唯一串口读写、视频分帧与解码、麦克风及音频确认分流、本机音频 broker |
 | `robot_console_server.py` | 本机 HTTP 状态、预览与控制 |
 | `face_engine.py` | YuNet 检测、ByteTrack 关联、标注 |
+| `mouth_tracking.py` / `setup-mouth.ps1` | 可选嘴部关键点与动作、目标锁定、校验下载及独立环境 |
 | `face_gate.py` / `voice_panel.py` | 人脸触发去抖、语音控制与会话状态 |
 | `voice_session.py` | 调用 vi-agent 持续语音、状态转发、取消及子进程回收 |
 | `camera_setup.py` / `video_source.py` | 保留的配网 / HTTP 调试模块，当前 USB 路径不使用 |

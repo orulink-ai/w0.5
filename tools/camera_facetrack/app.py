@@ -25,6 +25,7 @@ from face_gate import FaceGate
 from voice_panel import VoicePanel
 from board_broker import get_audio_broker
 from robot_console_server import RobotConsoleServer
+from mouth_tracking import MouthTracker
 
 
 @dataclass(frozen=True)
@@ -62,11 +63,13 @@ def put_latest(channel, value):
         channel.put_nowait(value)
 
 
-def camera_worker(settings, stop, output, events, view=None):
+def camera_worker(settings, stop, output, events, view=None, mouth=None):
     capture = None
     reader = None
     frames = queue.Queue(maxsize=1)
     try:
+        if mouth is not None:
+            mouth.reset()
         engine = FaceEngine(settings.activation, settings.buffer)
         network = isinstance(settings.camera, str)
         source_name = 'USB 直连摄像头' if network and settings.camera.startswith('serial://') else '网络摄像头'
@@ -148,6 +151,8 @@ def camera_worker(settings, stop, output, events, view=None):
             except queue.Empty:
                 continue
             if item is None:
+                if mouth is not None:
+                    mouth.reset()
                 engine = FaceEngine(settings.activation, settings.buffer)
                 times.clear()
                 fps_started = None
@@ -155,6 +160,8 @@ def camera_worker(settings, stop, output, events, view=None):
             captured_at, frame = item
             rotation = view.turns if view is not None else 0
             if rotation != last_rotation:
+                if mouth is not None:
+                    mouth.reset()
                 engine = FaceEngine(settings.activation, settings.buffer)
                 last_rotation = rotation
             frame = rotate_frame(frame, rotation)
@@ -163,6 +170,8 @@ def camera_worker(settings, stop, output, events, view=None):
                 first_frame = False
             begin = time.perf_counter()
             image, tracked = engine.process(frame, settings.width)
+            if mouth is not None:
+                mouth.submit(image, tracked, captured_at)
             end = time.perf_counter()
             if fps_started is None:
                 fps_started = end
@@ -177,6 +186,8 @@ def camera_worker(settings, stop, output, events, view=None):
         events.put(('error', str(exc)))
     finally:
         stop.set()
+        if mouth is not None:
+            mouth.reset()
         if reader is not None:
             # The reader owns release; do not release concurrently with read().
             reader.join()
@@ -204,6 +215,7 @@ class App:
         self.next_watch = time.monotonic() + 1
         self.next_status = 0
         self.view = ViewState()
+        self.mouth = MouthTracker()
         self.face_gate = FaceGate()
         self.pending_source = None
         self.manual_voice_pending = False
@@ -219,11 +231,13 @@ class App:
         self.setup_pending = False
         self.setup_dialog = None
         saved_voice_mode = 'continuous'
+        saved_mouth_assist = False
         try:
             saved_view = json.loads((Path(__file__).parent / 'runtime' / 'view-settings.json').read_text(encoding='utf-8'))
             self.view.turns = int(saved_view.get('turns', 0)) % 4
             if saved_view.get('voice_mode') in ('single', 'continuous'):
                 saved_voice_mode = saved_view['voice_mode']
+            saved_mouth_assist = saved_view.get('mouth_assist') is True
         except (OSError, ValueError, TypeError, AttributeError):
             pass
         self.source_files.append(Path(__file__).with_name('camera_setup.py'))
@@ -231,6 +245,7 @@ class App:
         self.source_files.extend(Path(__file__).with_name(name) for name in
                                  ('face_gate.py', 'voice_panel.py', 'voice_session.py',
                                   'board_broker.py', 'robot_console_server.py'))
+        self.source_files.append(Path(__file__).with_name('mouth_tracking.py'))
         self.source_times = [p.stat().st_mtime_ns for p in self.source_files]
         root.title('W0.5 · 人脸追踪与语音控制台' + (' · 热更新' if watch else ''))
         root.geometry(f'{min(1280, root.winfo_screenwidth()-80)}x{min(820, root.winfo_screenheight()-100)}')
@@ -349,7 +364,11 @@ class App:
         self.preview.grid(row=1, column=0, sticky='nsew')
         self.preview.bind('<Configure>', lambda event: self.refresh_preview())
         ttk.Label(viewer, textvariable=self.metrics, style='Muted.TLabel', wraplength=720).grid(row=2, column=0, sticky='w', pady=(12, 0))
-        self.voice = VoicePanel(viewer, self.request_voice_turn, self.set_voice_mode)
+        self.voice = VoicePanel(viewer, self.request_voice_turn, self.set_voice_mode, self.mouth.snapshot)
+        self.mouth_enabled = tk.BooleanVar(value=saved_mouth_assist)
+        self.mouth.configure(saved_mouth_assist)
+        ttk.Checkbutton(self.voice.frame, text='嘴型辅助判停（实验）', variable=self.mouth_enabled,
+                        command=lambda: self.set_mouth_assist(self.mouth_enabled.get())).pack(anchor='w')
         self.voice.mode = saved_voice_mode
         self.voice.mode_label.set('单轮触发' if saved_voice_mode == 'single' else '在场连续对话')
         self.voice.frame.grid(row=3, column=0, sticky='ew', pady=(8, 0))
@@ -390,7 +409,8 @@ class App:
         try:
             path = Path(__file__).parent / 'runtime' / 'view-settings.json'
             path.parent.mkdir(exist_ok=True)
-            path.write_text(json.dumps({'turns': self.view.turns, 'voice_mode': self.voice.mode}), encoding='utf-8')
+            path.write_text(json.dumps({'turns': self.view.turns, 'voice_mode': self.voice.mode,
+                                        'mouth_assist': self.mouth.snapshot()['enabled']}), encoding='utf-8')
         except OSError:
             pass
 
@@ -444,7 +464,7 @@ class App:
         settings = Settings(int(source) if source.isdecimal() else source, int(self.width.get()),
                             float(self.activation.get()), int(self.buffer.get()))
         self.worker = threading.Thread(target=camera_worker,
-                                       args=(settings, self.stop_event, self.output, self.events, self.view), daemon=True)
+                                       args=(settings, self.stop_event, self.output, self.events, self.view, self.mouth), daemon=True)
         self.start_button.configure(state='disabled')
         self.stop_button.configure(state='normal')
         for widget in self.config_widgets:
@@ -504,6 +524,18 @@ class App:
             self.voice_ready_at = time.monotonic() + 1.5
             self.save_view_settings()
 
+    def set_mouth_assist(self, enabled):
+        if self.mouth.snapshot()['enabled'] == enabled:
+            return
+        self.voice.cancel(reason='嘴型辅助设置已切换')
+        self.voice_mode_changed = self.voice.busy
+        self.face_gate.suspend()
+        self.face_gate.armed = True
+        self.voice_ready_at = time.monotonic() + 1.5
+        self.mouth.configure(enabled)
+        self.mouth_enabled.set(enabled)
+        self.save_view_settings()
+
     def process_robot_commands(self):
         for _ in range(8):
             try:
@@ -530,6 +562,8 @@ class App:
                 self.voice.toggle()
             elif action == 'configure':
                 self.voice.face_trigger.set(True)
+                if 'mouthAssist' in command:
+                    self.set_mouth_assist(command['mouthAssist'])
                 if 'mode' in command:
                     self.set_voice_mode(command['mode'])
                 if 'enabled' in command:
@@ -590,6 +624,7 @@ class App:
                             'assistantText': self.voice.answer_text,
                             'userText': getattr(self.voice, 'user_text', ''),
                             'pipeline': os.environ.get('VI_VOICE_PROVIDER', 'local-s2s'),
+                            'mouth': self.mouth.snapshot(),
                             'latency': getattr(self.voice, 'latency', None),
                             'replyComplete': self.voice.reply_complete,
                             'error': self.voice.error}}
@@ -774,6 +809,8 @@ class App:
         if self.setup_dialog is not None and not self.setup_dialog.closed:
             self.setup_dialog.close()
         self.stop()
+        if hasattr(self, 'mouth'):
+            self.mouth.close()
 
 
 if __name__ == '__main__':

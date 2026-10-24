@@ -11,6 +11,7 @@ def panel():
     result = VoicePanel.__new__(VoicePanel)
     result.events = queue.Queue()
     result.worker = None
+    result.mouth_provider = None
     result.stop_event = threading.Event()
     result.pending = None
     result.in_turn = False

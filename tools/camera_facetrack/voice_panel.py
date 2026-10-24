@@ -13,7 +13,8 @@ from voice_session import VoiceSession
 
 
 class VoicePanel:
-    def __init__(self, parent, request_turn, change_mode=None):
+    def __init__(self, parent, request_turn, change_mode=None, mouth_provider=None):
+        self.mouth_provider = mouth_provider
         self.events = queue.Queue()
         self.worker = None
         self.stop_event = threading.Event()
@@ -165,8 +166,9 @@ class VoicePanel:
 
             def work():
                 try:
+                    extras = {'mouth_provider': self.mouth_provider} if self.mouth_provider is not None else {}
                     VoiceSession(port, endpoint, lambda kind, text: events.put((kind, text)), stop,
-                                 broker=broker, prompt=prompt, once=once).run()
+                                 broker=broker, prompt=prompt, once=once, **extras).run()
                 except Exception as exc:
                     events.put(('error', str(exc)))
                 finally:

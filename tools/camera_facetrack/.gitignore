@@ -1,5 +1,8 @@
 .venv/
+.venv-mouth/
 __pycache__/
 *.pyc
 models/*.onnx
+models/*.task
+models/*.task.part
 runtime/

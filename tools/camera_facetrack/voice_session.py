@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 
 class VoiceSession:
-    def __init__(self, port, endpoint, on_event, stop_event, broker=None, prompt=None, once=False):
+    def __init__(self, port, endpoint, on_event, stop_event, broker=None, prompt=None, once=False, mouth_provider=None):
         self.port = port
         self.endpoint = endpoint
         self.on_event = on_event
@@ -25,6 +25,7 @@ class VoiceSession:
         self.broker = broker
         self.prompt = prompt
         self.once = once
+        self.mouth_provider = mouth_provider
 
     def run(self):
         url = urlsplit(self.endpoint)
@@ -83,11 +84,23 @@ class VoiceSession:
         done = False
         error = None
         deadline = time.monotonic() + 180
+        next_mouth = 0
         try:
             self.on_event('state', '正在启动 vi-agent · 检查本地语音模型…')
             while True:
                 if self.stop_event.is_set():
                     break
+                if pipeline == 'local-cascade' and self.mouth_provider is not None and time.monotonic() >= next_mouth:
+                    next_mouth = time.monotonic() + .1
+                    observation = self.mouth_provider()
+                    fields = ('enabled', 'available', 'moving', 'observedAt', 'lastMotionAt', 'targetId')
+                    payload = {'type': 'mouth', **{name: observation.get(name) for name in fields}}
+                    try:
+                        process.stdin.write(json.dumps(payload, allow_nan=False) + '\n')
+                        process.stdin.flush()
+                    except (OSError, ValueError):
+                        # Drain pending child diagnostics even if it has already closed stdin.
+                        next_mouth = float('inf')
                 if time.monotonic() >= deadline:
                     raise TimeoutError('本轮语音超时，请检查麦克风或本地模型日志。')
                 try:

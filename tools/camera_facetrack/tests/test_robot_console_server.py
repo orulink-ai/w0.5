@@ -9,6 +9,13 @@ from robot_console_server import MAX_BODY, MAX_JPEG, RobotConsoleServer, validat
 
 
 class RobotConsoleServerTests(unittest.TestCase):
+    def test_optional_mouth_assistance_accepts_only_boolean_values(self):
+        self.assertEqual(validate_command({'action': 'configure', 'mouthAssist': True})['mouthAssist'], True)
+        self.assertEqual(validate_command({'action': 'configure', 'mouthAssist': False})['mouthAssist'], False)
+        for value in (1, 'true', None, {}):
+            with self.assertRaises(ValueError):
+                validate_command({'action': 'configure', 'mouthAssist': value})
+
     def setUp(self):
         self.commands = queue.Queue(maxsize=1)
         self.server = RobotConsoleServer(self.commands.put_nowait, port=0)

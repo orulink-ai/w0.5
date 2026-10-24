@@ -8,6 +8,14 @@ Status: runnable hardware debugging version. Image quality, autofocus and sustai
 
 ## Windows setup
 
+### Optional mouth assistance (local-cascade)
+
+Run `pwsh -File setup-mouth.ps1`, set `cameraPython` in private `runtime/robot-console/config.json` to `.venv-mouth/Scripts/python.exe`, then restart the console. This prepares an isolated Python 3.12 environment with locked MediaPipe 1.1.1 dependencies and a SHA256-verified official float16 v1 Face Landmarker model (~3.76MB). The existing camera environment and firmware are unchanged; volume remains 80. Enable the experimental mouth checkbox in the web console; it defaults off and persists as `mouth_assist` in ignored view settings. `configure.mouthAssist` accepts booleans; status is returned as `voice.mouth`.
+
+The latest-frame worker runs at roughly 10 FPS on the host CPU. It locks one temporary face track, gates sound-only starts while a visible mouth is stationary, and permits a 900ms mouth-inactivity endpoint after 200ms of combined sound/motion. Ordinary silence still ends at 450ms; fresh continuing lip motion suppresses silence cuts. Missing/stale (>500ms) visual evidence or model failures revert to audio. Changing this option cancels the old session. All faces absent for two seconds, reconnects and rotations clear the target; a lost target does not automatically switch to a bystander. Only bounded metadata reaches Node stdin, without face images or landmarks. This is geometric motion assistance, not lip reading, speaker classification or ASR denoising. Smiles, chewing, yawns, occlusion and poor lighting can affect it; noisy-event acceptance remains pending.
+
+### Base camera environment
+
 Install Python 3.12 with Tk and the CH343 driver. Use a USB data cable. Find the actual port in Device Manager; COM15 is only the development default.
 
 ```powershell
@@ -83,6 +91,7 @@ For a manual Python setup (including non-Windows environments): create a Python 
 | `serial_video.py` / `board_broker.py` | Single serial owner, video decoding, microphone/ACK demultiplexing and local audio broker |
 | `robot_console_server.py` | Loopback HTTP status, preview and control |
 | `face_engine.py` | YuNet, ByteTrack and annotations |
+| `mouth_tracking.py` / `setup-mouth.ps1` | Optional lip motion, target lock, verified model download and isolated environment |
 | `face_gate.py` / `voice_panel.py` | Face debounce, speech controls and session state |
 | `voice_session.py` | vi-agent persistent speech process, events and bounded cancellation |
 | `camera_setup.py` / `video_source.py` | Retained provisioning / HTTP modules, unused by the current USB path |

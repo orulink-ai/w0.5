@@ -9,6 +9,42 @@ from voice_session import VoiceSession
 
 
 class VoiceSessionTests(unittest.TestCase):
+    def test_visual_stdin_closure_does_not_hide_the_original_model_error(self):
+        class Input(io.StringIO):
+            def write(self, text):
+                raise BrokenPipeError('child stdin closed')
+        class Process:
+            stdout = io.StringIO('{"type":"error","text":"模型加载失败"}\n')
+            stdin = Input()
+            def poll(self): return 1
+            def wait(self, timeout=None): return 1
+        with patch.dict('voice_session.os.environ', {'VI_VOICE_PROVIDER': 'local-cascade'}), \
+                patch('voice_session.subprocess.Popen', return_value=Process()):
+            with self.assertRaisesRegex(RuntimeError, '模型加载失败'):
+                VoiceSession('COM15', 'http://127.0.0.1:8790', lambda *_: None, threading.Event(),
+                             mouth_provider=lambda: {}).run()
+
+    def test_cascade_receives_visual_metadata_on_stdin_without_sending_images(self):
+        class Input(io.StringIO):
+            contents = ''
+            def write(self, text):
+                self.contents += text
+                return super().write(text)
+        class Process:
+            stdout = io.StringIO('{"type":"done","text":"你好"}\n')
+            stdin = Input()
+            def poll(self): return 0
+            def wait(self, timeout=None): return 0
+        process = Process()
+        observation = dict(enabled=True, available=True, moving=False, observedAt=1000,
+                           lastMotionAt=900, targetId=3)
+        with patch.dict('voice_session.os.environ', {'VI_VOICE_PROVIDER': 'local-cascade'}), \
+                patch('voice_session.subprocess.Popen', return_value=process):
+            VoiceSession('COM15', 'http://127.0.0.1:8790', lambda *_: None, threading.Event(),
+                         mouth_provider=lambda: observation).run()
+        message = json.loads(process.stdin.contents.splitlines()[0])
+        self.assertEqual(message, {'type': 'mouth', **observation})
+
     def test_cascade_entry_forwards_transcript_and_latency(self):
         events = []
         class Process:
