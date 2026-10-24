@@ -1,0 +1,54 @@
+Processing g431_dual_motor (platform: ststm32@20.0.0; board: genericSTM32G431CBT6; framework: arduino)
+--------------------------------------------------------------------------------
+Verbose mode can be enabled via `-v, --verbose` option
+CONFIGURATION: https://docs.platformio.org/page/boards/ststm32/genericSTM32G431CBT6.html
+PLATFORM: ST STM32 (20.0.0) > STM32G431CBT6 LQFP48 (128KB Flash, 32KB SRAM)
+HARDWARE: STM32G431CBT6 16MHz, 32KB RAM, 128KB Flash
+DEBUG: Current (stlink) External (cmsis-dap, jlink, stlink)
+PACKAGES:
+ - framework-arduinoststm32 @ 4.21200.0 (2.12.0)
+ - framework-cmsis @ 2.60300.0 (6.3.0)
+ - framework-cmsis-dsp @ 1.16.2
+ - tool-dfuutil @ 1.11.241029
+ - tool-dfuutil-arduino @ 1.11.0
+ - tool-openocd @ 3.1200.7 (12.0)
+ - tool-stm32duino @ 1.0.1
+ - tool-stm32flash @ 0.7.0
+ - toolchain-gccarmnoneeabi @ 1.120301.0 (12.3.1)
+LDF: Library Dependency Finder -> https://bit.ly/configure-pio-ldf
+LDF Modes: Finder ~ chain, Compatibility ~ soft
+Found 21 compatible libraries
+Scanning dependencies...
+Dependency Graph
+|-- Simple FOC @ 2.4.0
+|-- closed_loop
+|-- enable_control
+|-- as5600_pwm
+Building in release mode
+Checking size .pio/build/g431_dual_motor/firmware.elf
+Advanced Memory Usage is available via "PlatformIO Home > Project Inspect"
+RAM:   [==        ]  21.0% (used 6888 bytes from 32768 bytes)
+Flash: [======    ]  55.1% (used 72176 bytes from 131072 bytes)
+Configuring upload protocol...
+AVAILABLE: cmsis-dap, jlink, stlink
+CURRENT: upload_protocol = stlink
+Uploading .pio/build/g431_dual_motor/firmware.elf
+xPack Open On-Chip Debugger 0.12.0+dev-02228-ge5888bda3-dirty (2025-10-04-22:45)
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+[stm32g4x.cpu] halted due to debug-request, current mode: Thread
+xPSR: 0x01000000 pc: 0x0800c818 msp: 0x20008000
+** Programming Started **
+Warn : Adding extra erase range, 0x08011c10 .. 0x08011fff
+** Programming Finished **
+** Verify Started **
+** Verified OK **
+** Resetting Target **
+shutdown command invoked
+========================= [SUCCESS] Took 9.04 seconds =========================
+
+Environment      Status    Duration
+---------------  --------  ------------
+g431_dual_motor  SUCCESS   00:00:09.039
+========================= 1 succeeded in 00:00:09.039 =========================

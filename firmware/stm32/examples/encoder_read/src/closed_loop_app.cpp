@@ -1,6 +1,7 @@
 #if defined(CLOSED_LOOP_CONTROL)
 #include "closed_loop_app.h"
 #include "closed_loop_tuning.h"
+#include "calibration_recovery.h"
 
 namespace closed_application {
 namespace {
@@ -116,6 +117,26 @@ void Application::apply(const closed_protocol::Request& r) {
     reply(accepted,r.id,accepted?"RESET":"RESET_NOT_READY");
     report(); return;
   }
+  if(r.action==Action::Calibrate) {
+    auto& sensor=hardware_.sensor();
+    sensor.update(); // Validate a fresh capture before clearing any latch.
+    const closed_loop::CalibrationReadiness state{fault_,policy_.running()||alignment_.active(),
+        hardware_.enabled()||hardware_.pinHighReadback(),sensor.valid(),
+        hardware_.calibrationReady(),sensor.measurementVelocity()};
+    if(!closed_loop::canRecalibrate(state)||!hardware_.recoverForCalibration()||
+       !policy_.resetForCalibration()) {
+      reply(false,r.id,"RECALIBRATE_NOT_READY");report();return;
+    }
+    stop("USER_STOP");
+    fault_="NONE";target_deg_=0;
+    hardware_.motor().PID_velocity.reset();hardware_.motor().P_angle.reset();
+    const bool accepted=alignment_.start(millis(),sensor.getAngle())&&
+        hardware_.enable()&&lease_.start(r.id,millis());
+    if(accepted)stop_reason_="NONE";
+    else fail("ENABLE_FAILED");
+    reply(accepted,r.id,accepted?"CALIBRATE":"INVALID_OR_ENABLE_FAILED");
+    report();return;
+  }
   if(policy_.faulted()||hardware_.faulted()) { reply(false,r.id,"FAULT"); return; }
   if(alignment_.active()||policy_.running()||hardware_.enabled()) {
     reply(false,r.id,"BUSY"); return;
@@ -123,13 +144,7 @@ void Application::apply(const closed_protocol::Request& r) {
   if(!hardware_.sensor().valid()) { reply(false,r.id,"SENSOR_INVALID"); return; }
   const float raw=hardware_.sensor().getAngle();
   bool accepted=false;
-  if(r.action==Action::Calibrate) {
-    policy_.invalidate();
-    accepted=alignment_.start(millis(),raw);
-    if(accepted && (!hardware_.enable()||!lease_.start(r.id,millis()))) {
-      fail("ENABLE_FAILED"); accepted=false;
-    }
-  } else if(!policy_.calibrated()) {
+  if(!policy_.calibrated()) {
     reply(false,r.id,"NOT_CALIBRATED"); return;
   } else if(r.action==Action::Zero) {
     accepted=policy_.zero(raw);

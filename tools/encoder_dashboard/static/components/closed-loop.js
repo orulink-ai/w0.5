@@ -4,6 +4,8 @@
   const STATES = Object.freeze({UNCALIBRATED: "未校准", CALIBRATING: "校准中", READY: "已校准 · 已停止",
     RUNNING: "闭环运行中", FAULT: "故障"});
   const MODES = Object.freeze({POSITION: "位置保持", VELOCITY: "恒速旋转"});
+  const RECALIBRATION_FAULTS = new Set(['ALIGNMENT_FAILED','FOC_INIT_FAILED','OVERSPEED',
+    'SENSOR_INVALID','SOFT_LIMIT','HARDWARE_OR_FEEDBACK','ENABLE_FAILED']);
 
   function viewModel(state, busy = false) {
     const control = state?.closed_loop;
@@ -20,7 +22,9 @@
       ready,
       enableLabel: !available ? "未知" : control.enabled === true ? "已开启" : control.enabled === false ? "已关闭" : "未知",
       hasRelative: available && control.calibrated === true && control.sensor_valid === true,
-      calibrate: supportedVersion && available && sensorValid && control.enabled === false && !pending && control.state === "UNCALIBRATED",
+      calibrate: supportedVersion && available && sensorValid && control.enabled === false && !pending &&
+        (['UNCALIBRATED','READY'].includes(control.state) ||
+          (control.state === 'FAULT' && RECALIBRATION_FAULTS.has(control.fault))),
       reset: Boolean(supportedVersion && available && sensorValid && !pending &&
         control.enabled === false && control.state === "FAULT" && control.fault === "OVERSPEED"),
       overspeedConfig: Boolean(supportedVersion && available && sensorValid && !pending &&
@@ -67,7 +71,7 @@
         </div>
         <p class="target-status" data-field="overspeed">超速保护：等待芯片状态</p>
         <div class="enable-actions"><button type="button" class="secondary" data-action="overspeed" disabled>关闭超速保护</button></div>
-        <p class="target-note">超速阈值为约19rpm（115°/秒），与目标速度上限10rpm不同。停机后可切换；关闭后手拨超速不会触发此保护，位置保持与软限位仍有效。芯片重启后恢复开启。</p>
+        <p class="target-note">反馈转速超过60rpm并持续100ms才停机；超过120rpm立即停机。目标速度上限仍为10rpm。停机后可切换；关闭后跳过这两级超速判定，位置保持与软限位仍有效。芯片重启后恢复开启。</p>
         <div class="enable-actions">
           <button class="enable-on" data-action="calibrate" disabled>校准 FOC · 转轴会运动</button>
           <button class="secondary" data-action="zero" disabled>当前位置设为零点</button>
@@ -207,13 +211,15 @@
       this.field("badge").className = `motor-badge ${control?.state === "RUNNING" && control.available && control.calibrated && control.sensor_valid && control.enabled ? "enabled" : ""}`;
       for (const action of ["zero", "limits", "start"]) this.element.querySelector(`[data-action="${action}"]`).disabled = !model.ready;
       this.element.querySelector('[data-action="calibrate"]').disabled = !model.calibrate;
+      this.element.querySelector('[data-action="calibrate"]').textContent = control?.state === 'UNCALIBRATED'
+        ? '校准 FOC · 转轴会运动' : '重新校准 FOC · 转轴会运动';
       this.element.querySelector('[data-action="stop"]').disabled = !model.stop;
       this.element.querySelector('[data-action="reset"]').disabled = !model.reset;
       const overspeedButton = this.element.querySelector('[data-action="overspeed"]');
       overspeedButton.disabled = !model.overspeedConfig;
       overspeedButton.textContent = control?.overspeed_enabled === false ? "开启超速保护" : "关闭超速保护";
       this.field("overspeed").textContent = !control?.available || !state?.connected ? "超速保护：状态未知"
-        : control.overspeed_enabled === true ? "超速保护：已开启 · 阈值约19rpm"
+        : control.overspeed_enabled === true ? "超速保护：已开启 · 60rpm持续100ms / 120rpm立即"
         : control.overspeed_enabled === false ? "超速保护：已关闭 · 手拨超速不再触发停机"
         : "超速保护：当前固件未报告开关状态，请更新固件";
       const format = (value, suffix) => Number.isFinite(value) && control?.available ? `${value.toFixed(1)}${suffix}` : "—";
@@ -243,14 +249,18 @@
       else if (control.state === "CALIBRATING") status = "正在校准传感器方向和电角度零位，请勿转动或阻挡转轴。";
       else if (control.state === "FAULT") status = control.fault === "OVERSPEED"
         ? "转轴速度超过保护阈值，已锁定停止；手动转轴也可能触发。请松手待转轴停稳，再点“清除超速故障”；复位后需手动启动。"
-        : `固件报告故障：${control.fault || "未知"}；驱动应关闭，请检查实时状态。`;
+        : `固件报告故障：${control.fault || "未知"}；${RECALIBRATION_FAULTS.has(control.fault)
+          ? '修复供电或接线并待转轴停稳后，可点击重新校准 FOC；只影响本路。'
+          : '请检查硬件与初始化状态，修复后复位芯片。'}`;
       else if (control.state === "RUNNING" && control.calibrated && control.sensor_valid && control.enabled) status = this.lease.runId === control.run_id ? "闭环运行中，页面正在维护运动连接。位置目标可实时调整；修改速度需先停止。" : "设备正在运行；本页面未持有该次运动，不会自动接管。";
       else if (state.signal !== "valid") status = "编码器数据无效或超时，暂不能开始。";
       else if (model.ready) status = control.stop_reason === "COMM_TIMEOUT" ? "通信租约已超时，芯片已停止。请手动重新启动。" : control.stop_reason === "LIMIT" ? "已到达软限位并停止。请手动选择新目标启动。" : "已校准并停止。选择模式和参数，再点击启动并保持。";
       else status = "设备反馈尚未满足闭环就绪条件，请检查编码器、校准与使能状态。";
       this.field("status").textContent = status;
       const rawError = this.error || control?.command?.error || "";
-      const error = rawError.includes("RESET_NOT_READY")
+      const error = rawError.includes('RECALIBRATE_NOT_READY')
+        ? '暂不能重新校准：请待转轴停稳，确认编码器有效、EN 已关闭、驱动故障已消除；初始化故障需复位。'
+        : rawError.includes("RESET_NOT_READY")
         ? "暂不能复位：请松手，待转轴停稳并确认编码器有效、EN 已关闭后重试。" : rawError;
       this.field("error").textContent = error;
       this.field("error").hidden = !error;

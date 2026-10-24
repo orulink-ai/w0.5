@@ -1,0 +1,31 @@
+{
+  "folder": "round-5-ramp100",
+  "source": "SWD PWM tracker",
+  "settled_samples": 545,
+  "target_deg": 11.5,
+  "mean_deg": 11.5516058383252,
+  "mean_error_deg": 0.051605838325199826,
+  "std_deg": 0.0419008490231872,
+  "peak_to_peak_deg": 0.42266576621872787,
+  "minimum_deg": 11.334589523476325,
+  "maximum_deg": 11.757255289695053,
+  "faults": [
+    "NONE"
+  ],
+  "primary_unchanged": true,
+  "accepted": true,
+  "after_two_seconds": {
+    "n": 336,
+    "mean_deg": 11.551828365455691,
+    "mean_error_deg": 0.05182836545569103,
+    "peak_to_peak_deg": 0.16119246441230928,
+    "std_deg": 0.023527177425617656,
+    "accepted": true
+  },
+  "drag_error_deg": {
+    "rms": 1.1699867360762377,
+    "max_absolute": 3.2223555223862945,
+    "n": 1297
+  },
+  "last_outside_half_degree_ms_after_final_input": 1023.0
+}

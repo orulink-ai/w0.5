@@ -1,0 +1,23 @@
+{
+  "folder": "round-4-drag",
+  "source": "SWD PWM tracker",
+  "settled_samples": 381,
+  "target_deg": 11.0,
+  "mean_deg": 10.944343994123797,
+  "mean_error_deg": -0.05565600587620345,
+  "std_deg": 1.1993784384598436,
+  "peak_to_peak_deg": 3.8094287265478926,
+  "minimum_deg": 8.998173053711724,
+  "maximum_deg": 12.807601780259617,
+  "faults": [
+    "NONE"
+  ],
+  "primary_unchanged": true,
+  "accepted": false,
+  "drag_error_deg": {
+    "rms": 1.3554224728107827,
+    "max_absolute": 3.6261797027023306,
+    "n": 2560
+  },
+  "last_outside_half_degree_ms_after_final_input": 2707.0
+}

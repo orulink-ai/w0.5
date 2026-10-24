@@ -1,0 +1,21 @@
+[
+  {
+    "host_ms": 1792852576578,
+    "event": "start_click",
+    "target": -64
+  },
+  {
+    "host_ms": 1792852578982,
+    "event": "step_input",
+    "target": -56
+  },
+  {
+    "host_ms": 1792852585155,
+    "event": "return_input",
+    "target": -64
+  },
+  {
+    "host_ms": 1792852590416,
+    "event": "stop_click"
+  }
+]

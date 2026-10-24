@@ -1,0 +1,13 @@
+# Keep bulky captures local; selected baseline/final evidence is archived below.
+**/states.jsonl
+**/serial.jsonl
+**/swd-raw.log
+**/*.csv
+**/before.json
+**/after.json
+final-state.json
+# Session-specific execution scripts are local bench tooling, not product code.
+**/capture.py
+**/capture-swd.tcl
+**/browser.mjs
+**/browser.log

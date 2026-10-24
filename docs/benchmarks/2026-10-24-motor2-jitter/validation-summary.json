@@ -1,0 +1,234 @@
+[
+  {
+    "folder": "round-4-drag",
+    "source": "SWD PWM tracker",
+    "settled_samples": 381,
+    "target_deg": 11.0,
+    "mean_deg": 10.944343994123797,
+    "mean_error_deg": -0.05565600587620345,
+    "std_deg": 1.1993784384598436,
+    "peak_to_peak_deg": 3.8094287265478926,
+    "minimum_deg": 8.998173053711724,
+    "maximum_deg": 12.807601780259617,
+    "faults": [
+      "NONE"
+    ],
+    "primary_unchanged": true,
+    "accepted": false,
+    "drag_error_deg": {
+      "rms": 1.3554224728107827,
+      "max_absolute": 3.6261797027023306,
+      "n": 2560
+    },
+    "last_outside_half_degree_ms_after_final_input": 2707.0
+  },
+  {
+    "folder": "round-5-ramp100",
+    "source": "SWD PWM tracker",
+    "settled_samples": 545,
+    "target_deg": 11.5,
+    "mean_deg": 11.5516058383252,
+    "mean_error_deg": 0.051605838325199826,
+    "std_deg": 0.0419008490231872,
+    "peak_to_peak_deg": 0.42266576621872787,
+    "minimum_deg": 11.334589523476325,
+    "maximum_deg": 11.757255289695053,
+    "faults": [
+      "NONE"
+    ],
+    "primary_unchanged": true,
+    "accepted": true,
+    "after_two_seconds": {
+      "n": 336,
+      "mean_deg": 11.551828365455691,
+      "mean_error_deg": 0.05182836545569103,
+      "peak_to_peak_deg": 0.16119246441230928,
+      "std_deg": 0.023527177425617656,
+      "accepted": true
+    },
+    "drag_error_deg": {
+      "rms": 1.1699867360762377,
+      "max_absolute": 3.2223555223862945,
+      "n": 1297
+    },
+    "last_outside_half_degree_ms_after_final_input": 1023.0
+  },
+  {
+    "folder": "round-6-ramp100-repeat",
+    "source": "SWD PWM tracker",
+    "settled_samples": 553,
+    "target_deg": 11.5,
+    "mean_deg": 11.693758096419245,
+    "mean_error_deg": 0.1937580964192449,
+    "std_deg": 0.08812559870038539,
+    "peak_to_peak_deg": 0.39477127364838793,
+    "minimum_deg": 11.509633611525416,
+    "maximum_deg": 11.904404885173804,
+    "faults": [
+      "NONE"
+    ],
+    "primary_unchanged": true,
+    "accepted": true,
+    "after_two_seconds": {
+      "n": 308,
+      "mean_deg": 11.631448970927524,
+      "mean_error_deg": 0.13144897092752394,
+      "peak_to_peak_deg": 0.24861888578845992,
+      "std_deg": 0.05451156796045244,
+      "accepted": true
+    },
+    "drag_error_deg": {
+      "rms": 1.2372212660348532,
+      "max_absolute": 2.6488696827892966,
+      "n": 1532
+    },
+    "last_outside_half_degree_ms_after_final_input": 1639.0
+  },
+  {
+    "folder": "round-7-serial-only",
+    "source": "UART TRACE",
+    "settled_samples": 20,
+    "target_deg": 12.0,
+    "mean_deg": 11.97345,
+    "mean_error_deg": -0.026550000000000296,
+    "std_deg": 0.0785286412718316,
+    "peak_to_peak_deg": 0.27800000000000047,
+    "minimum_deg": 11.786,
+    "maximum_deg": 12.064,
+    "faults": [
+      "NONE"
+    ],
+    "primary_unchanged": true,
+    "accepted": true,
+    "drag_error_deg": {
+      "rms": 1.1219394404815741,
+      "max_absolute": 2.4510000000000005,
+      "n": 74
+    },
+    "last_outside_half_degree_ms_after_final_input": 873
+  },
+  {
+    "folder": "round-8-firmware",
+    "source": "SWD PWM tracker",
+    "settled_samples": 1437,
+    "target_deg": 12.0,
+    "mean_deg": 12.022128896783867,
+    "mean_error_deg": 0.02212889678386709,
+    "std_deg": 0.193822235960513,
+    "peak_to_peak_deg": 0.8456730418959495,
+    "minimum_deg": 11.598949530759327,
+    "maximum_deg": 12.444622572655277,
+    "faults": [
+      "NONE"
+    ],
+    "primary_unchanged": true,
+    "accepted": false,
+    "after_two_seconds": {
+      "n": 1083,
+      "mean_deg": 12.043358772189746,
+      "mean_error_deg": 0.043358772189746375,
+      "peak_to_peak_deg": 0.8456730418959495,
+      "std_deg": 0.211052695890401,
+      "accepted": false
+    },
+    "drag_error_deg": {
+      "rms": 1.0290129624572033,
+      "max_absolute": 3.074401498233911,
+      "n": 2298
+    },
+    "last_outside_half_degree_ms_after_final_input": 1013.0
+  },
+  {
+    "folder": "round-9-p010",
+    "source": "SWD PWM tracker",
+    "settled_samples": 1218,
+    "target_deg": 12.0,
+    "mean_deg": 11.958493470092298,
+    "mean_error_deg": -0.04150652990770176,
+    "std_deg": 0.04812762407788888,
+    "peak_to_peak_deg": 0.3351847033292046,
+    "minimum_deg": 11.760141995171622,
+    "maximum_deg": 12.095326698500827,
+    "faults": [
+      "NONE"
+    ],
+    "primary_unchanged": true,
+    "accepted": true,
+    "after_two_seconds": {
+      "n": 1096,
+      "mean_deg": 11.970433075010979,
+      "mean_error_deg": -0.02956692498902136,
+      "peak_to_peak_deg": 0.2615689244548065,
+      "std_deg": 0.030083726318911583,
+      "accepted": true
+    },
+    "drag_error_deg": {
+      "rms": 1.7367274109517985,
+      "max_absolute": 3.7009415809883563,
+      "n": 1443
+    },
+    "last_outside_half_degree_ms_after_final_input": 741.0
+  },
+  {
+    "folder": "round-10-final",
+    "source": "SWD PWM tracker",
+    "settled_samples": 1557,
+    "target_deg": 12.0,
+    "mean_deg": 11.9689790046106,
+    "mean_error_deg": -0.031020995389399175,
+    "std_deg": 0.10656879814368478,
+    "peak_to_peak_deg": 0.5113762631588514,
+    "minimum_deg": 11.65158266697587,
+    "maximum_deg": 12.162958930134721,
+    "faults": [
+      "NONE"
+    ],
+    "primary_unchanged": true,
+    "accepted": false,
+    "after_two_seconds": {
+      "n": 1164,
+      "mean_deg": 12.020913082023917,
+      "mean_error_deg": 0.02091308202391673,
+      "peak_to_peak_deg": 0.32029489093856967,
+      "std_deg": 0.05051661146031263,
+      "accepted": true
+    },
+    "drag_error_deg": {
+      "rms": 1.7035198181892033,
+      "max_absolute": 3.8177572804187463,
+      "n": 2654
+    },
+    "last_outside_half_degree_ms_after_final_input": 916.0
+  },
+  {
+    "folder": "round-11-final-serial",
+    "source": "UART TRACE",
+    "settled_samples": 70,
+    "target_deg": 11.5,
+    "mean_deg": 11.533714285714286,
+    "mean_error_deg": 0.03371428571428581,
+    "std_deg": 0.017832668943056608,
+    "peak_to_peak_deg": 0.07399999999999984,
+    "minimum_deg": 11.492,
+    "maximum_deg": 11.566,
+    "faults": [
+      "NONE"
+    ],
+    "primary_unchanged": true,
+    "accepted": true,
+    "after_two_seconds": {
+      "n": 60,
+      "mean_deg": 11.532733333333333,
+      "mean_error_deg": 0.03273333333333284,
+      "peak_to_peak_deg": 0.07399999999999984,
+      "std_deg": 0.01833927176550072,
+      "accepted": true
+    },
+    "drag_error_deg": {
+      "rms": 1.525825022733603,
+      "max_absolute": 2.851000000000001,
+      "n": 52
+    },
+    "last_outside_half_degree_ms_after_final_input": 352
+  }
+]

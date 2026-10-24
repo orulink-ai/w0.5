@@ -1,0 +1,50 @@
+[
+  {
+    "host_ms": 1792854034030,
+    "event": "start_click"
+  },
+  {
+    "host_ms": 1792854035415,
+    "event": "drag_segment",
+    "from": 12,
+    "to": 17
+  },
+  {
+    "host_ms": 1792854036923,
+    "event": "drag_segment",
+    "from": 17,
+    "to": 22
+  },
+  {
+    "host_ms": 1792854038210,
+    "event": "drag_segment",
+    "from": 22,
+    "to": 17
+  },
+  {
+    "host_ms": 1792854039521,
+    "event": "drag_segment",
+    "from": 17,
+    "to": 12
+  },
+  {
+    "host_ms": 1792854040786,
+    "event": "drag_segment",
+    "from": 12,
+    "to": 7
+  },
+  {
+    "host_ms": 1792854042074,
+    "event": "drag_segment",
+    "from": 7,
+    "to": 12
+  },
+  {
+    "host_ms": 1792854043388,
+    "event": "release"
+  },
+  {
+    "host_ms": 1792854048492,
+    "event": "stop_click"
+  }
+]

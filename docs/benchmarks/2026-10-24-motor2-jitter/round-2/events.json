@@ -1,0 +1,12 @@
+[
+  {
+    "host_ms": 1792852521261,
+    "event": "capture_ready",
+    "initial": -64.0,
+    "target": -56.0
+  },
+  {
+    "host_ms": 1792852553286,
+    "event": "final_stop"
+  }
+]

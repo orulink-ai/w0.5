@@ -20,6 +20,8 @@ FIELDS = {
     'overspeed': ('enabled',),
     'target': ('run_id', 'target_deg'),
 }
+RECALIBRATION_FAULTS = frozenset(('ALIGNMENT_FAILED', 'FOC_INIT_FAILED', 'OVERSPEED',
+                                'SENSOR_INVALID', 'SOFT_LIMIT', 'HARDWARE_OR_FEEDBACK', 'ENABLE_FAILED'))
 
 
 def _number(value):
@@ -266,8 +268,10 @@ class ClosedLoopChannel:
                         raise CommandError('手动复位仅用于已停止的超速故障；其他故障需先检查原因。')
                     self._owner = self._owner_at = self._owner_started_at = None
                 elif action == 'calibrate':
-                    if status['state'] != 'UNCALIBRATED':
-                        raise CommandError('校准仅允许在未校准、停机状态开始。')
+                    if (status['state'] not in ('UNCALIBRATED', 'READY') and not
+                            (status['state'] == 'FAULT' and status.get('fault') in RECALIBRATION_FAULTS)):
+                        raise CommandError('重新校准需要停机且故障可恢复；初始化或看门狗故障需检查后复位。')
+                    self._owner = self._owner_at = self._owner_started_at = None
                 elif status['state'] != 'READY' or not status['calibrated']:
                     raise CommandError('请先完成 FOC 校准并停止运动。')
                 lower, upper = status['soft_min_deg'], status['soft_max_deg']

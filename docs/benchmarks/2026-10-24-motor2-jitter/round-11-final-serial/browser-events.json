@@ -1,0 +1,38 @@
+[
+  {
+    "host_ms": 1792854346845,
+    "event": "start_click"
+  },
+  {
+    "host_ms": 1792854347972,
+    "event": "drag_segment",
+    "from": 11.5,
+    "to": 6.5
+  },
+  {
+    "host_ms": 1792854349266,
+    "event": "drag_segment",
+    "from": 6.5,
+    "to": 1.5
+  },
+  {
+    "host_ms": 1792854350600,
+    "event": "drag_segment",
+    "from": 1.5,
+    "to": 6.5
+  },
+  {
+    "host_ms": 1792854351865,
+    "event": "drag_segment",
+    "from": 6.5,
+    "to": 11.5
+  },
+  {
+    "host_ms": 1792854353168,
+    "event": "release"
+  },
+  {
+    "host_ms": 1792854361270,
+    "event": "stop_click"
+  }
+]

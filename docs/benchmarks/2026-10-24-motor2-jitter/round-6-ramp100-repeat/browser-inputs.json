@@ -1,0 +1,312 @@
+[
+  {
+    "host_ms": 1792853762850,
+    "type": "pointerdown",
+    "value": 11.5
+  },
+  {
+    "host_ms": 1792853762873,
+    "type": "input",
+    "value": 11
+  },
+  {
+    "host_ms": 1792853762940,
+    "type": "input",
+    "value": 10.5
+  },
+  {
+    "host_ms": 1792853763006,
+    "type": "input",
+    "value": 10
+  },
+  {
+    "host_ms": 1792853763072,
+    "type": "input",
+    "value": 9.5
+  },
+  {
+    "host_ms": 1792853763139,
+    "type": "input",
+    "value": 9
+  },
+  {
+    "host_ms": 1792853763189,
+    "type": "input",
+    "value": 8.5
+  },
+  {
+    "host_ms": 1792853763256,
+    "type": "input",
+    "value": 8
+  },
+  {
+    "host_ms": 1792853763311,
+    "type": "input",
+    "value": 7.5
+  },
+  {
+    "host_ms": 1792853763372,
+    "type": "input",
+    "value": 7
+  },
+  {
+    "host_ms": 1792853763422,
+    "type": "input",
+    "value": 6.5
+  },
+  {
+    "host_ms": 1792853764139,
+    "type": "input",
+    "value": 6
+  },
+  {
+    "host_ms": 1792853764207,
+    "type": "input",
+    "value": 5.5
+  },
+  {
+    "host_ms": 1792853764273,
+    "type": "input",
+    "value": 5
+  },
+  {
+    "host_ms": 1792853764339,
+    "type": "input",
+    "value": 4.5
+  },
+  {
+    "host_ms": 1792853764407,
+    "type": "input",
+    "value": 4
+  },
+  {
+    "host_ms": 1792853764455,
+    "type": "input",
+    "value": 3.5
+  },
+  {
+    "host_ms": 1792853764523,
+    "type": "input",
+    "value": 3
+  },
+  {
+    "host_ms": 1792853764573,
+    "type": "input",
+    "value": 2.5
+  },
+  {
+    "host_ms": 1792853764623,
+    "type": "input",
+    "value": 2
+  },
+  {
+    "host_ms": 1792853764689,
+    "type": "input",
+    "value": 1.5
+  },
+  {
+    "host_ms": 1792853765406,
+    "type": "input",
+    "value": 2
+  },
+  {
+    "host_ms": 1792853765473,
+    "type": "input",
+    "value": 2.5
+  },
+  {
+    "host_ms": 1792853765540,
+    "type": "input",
+    "value": 3
+  },
+  {
+    "host_ms": 1792853765589,
+    "type": "input",
+    "value": 3.5
+  },
+  {
+    "host_ms": 1792853765639,
+    "type": "input",
+    "value": 4
+  },
+  {
+    "host_ms": 1792853765707,
+    "type": "input",
+    "value": 4.5
+  },
+  {
+    "host_ms": 1792853765773,
+    "type": "input",
+    "value": 5
+  },
+  {
+    "host_ms": 1792853765839,
+    "type": "input",
+    "value": 5.5
+  },
+  {
+    "host_ms": 1792853765907,
+    "type": "input",
+    "value": 6
+  },
+  {
+    "host_ms": 1792853765973,
+    "type": "input",
+    "value": 6.5
+  },
+  {
+    "host_ms": 1792853766689,
+    "type": "input",
+    "value": 7
+  },
+  {
+    "host_ms": 1792853766756,
+    "type": "input",
+    "value": 7.5
+  },
+  {
+    "host_ms": 1792853766823,
+    "type": "input",
+    "value": 8
+  },
+  {
+    "host_ms": 1792853766889,
+    "type": "input",
+    "value": 8.5
+  },
+  {
+    "host_ms": 1792853766956,
+    "type": "input",
+    "value": 9
+  },
+  {
+    "host_ms": 1792853767023,
+    "type": "input",
+    "value": 9.5
+  },
+  {
+    "host_ms": 1792853767089,
+    "type": "input",
+    "value": 10
+  },
+  {
+    "host_ms": 1792853767156,
+    "type": "input",
+    "value": 10.5
+  },
+  {
+    "host_ms": 1792853767223,
+    "type": "input",
+    "value": 11
+  },
+  {
+    "host_ms": 1792853767289,
+    "type": "input",
+    "value": 11.5
+  },
+  {
+    "host_ms": 1792853768005,
+    "type": "input",
+    "value": 12
+  },
+  {
+    "host_ms": 1792853768073,
+    "type": "input",
+    "value": 12.5
+  },
+  {
+    "host_ms": 1792853768139,
+    "type": "input",
+    "value": 13
+  },
+  {
+    "host_ms": 1792853768206,
+    "type": "input",
+    "value": 13.5
+  },
+  {
+    "host_ms": 1792853768273,
+    "type": "input",
+    "value": 14
+  },
+  {
+    "host_ms": 1792853768340,
+    "type": "input",
+    "value": 14.5
+  },
+  {
+    "host_ms": 1792853768406,
+    "type": "input",
+    "value": 15
+  },
+  {
+    "host_ms": 1792853768473,
+    "type": "input",
+    "value": 15.5
+  },
+  {
+    "host_ms": 1792853768538,
+    "type": "input",
+    "value": 16
+  },
+  {
+    "host_ms": 1792853768606,
+    "type": "input",
+    "value": 16.5
+  },
+  {
+    "host_ms": 1792853769323,
+    "type": "input",
+    "value": 16
+  },
+  {
+    "host_ms": 1792853769389,
+    "type": "input",
+    "value": 15.5
+  },
+  {
+    "host_ms": 1792853769456,
+    "type": "input",
+    "value": 15
+  },
+  {
+    "host_ms": 1792853769523,
+    "type": "input",
+    "value": 14.5
+  },
+  {
+    "host_ms": 1792853769589,
+    "type": "input",
+    "value": 14
+  },
+  {
+    "host_ms": 1792853769639,
+    "type": "input",
+    "value": 13.5
+  },
+  {
+    "host_ms": 1792853769706,
+    "type": "input",
+    "value": 13
+  },
+  {
+    "host_ms": 1792853769773,
+    "type": "input",
+    "value": 12.5
+  },
+  {
+    "host_ms": 1792853769840,
+    "type": "input",
+    "value": 12
+  },
+  {
+    "host_ms": 1792853769906,
+    "type": "input",
+    "value": 11.5
+  },
+  {
+    "host_ms": 1792853770610,
+    "type": "pointerup",
+    "value": 11.5
+  }
+]

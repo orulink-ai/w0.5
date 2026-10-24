@@ -58,12 +58,13 @@ bool MotorHardware::begin() {
     motor_.controller=MotionControlType::angle;
     motor_.voltage_limit=closed_loop::tuning::kMotorVoltageLimit;motor_.voltage_sensor_align=1;
     motor_.velocity_limit=closed_loop::tuning::kVelocityLimitRadS;
-    motor_.PID_velocity.P=closed_loop::tuning::kVelocityP;
-    motor_.PID_velocity.I=closed_loop::tuning::kVelocityI;
-    motor_.PID_velocity.D=closed_loop::tuning::kVelocityD;
-    motor_.PID_velocity.output_ramp=closed_loop::tuning::kVelocityVoltageRamp;
-    motor_.LPF_velocity.Tf=closed_loop::tuning::kVelocityFilterSeconds;
-    motor_.P_angle.P=closed_loop::tuning::kAngleP;
+    const auto control=closed_loop::tuning::controllerFor(pins_.id);
+    motor_.PID_velocity.P=control.velocity_p;
+    motor_.PID_velocity.I=control.velocity_i;
+    motor_.PID_velocity.D=control.velocity_d;
+    motor_.PID_velocity.output_ramp=control.voltage_ramp;
+    motor_.LPF_velocity.Tf=control.velocity_filter_seconds;
+    motor_.P_angle.P=control.angle_p;
     initialized_=motor_.init();
   }
   stop();
@@ -87,6 +88,15 @@ bool MotorHardware::enable() {
   enabled_=pinHigh();
   if(!enabled_){fault_=true;stop();}
   return enabled_;
+}
+bool MotorHardware::calibrationReady() const {
+  return initialized_&&driver_ready_&&!enabled_&&!pinHigh()&&sensor_.valid()&&
+      digitalRead(pins_.fault)==HIGH;
+}
+bool MotorHardware::recoverForCalibration() {
+  if(!calibrationReady())return false;
+  fault_=false; // Clear only a recovered runtime latch, never initialization.
+  return true;
 }
 void MotorHardware::stop() {
   digitalWrite(pins_.enable,LOW);__DSB();enabled_=false;

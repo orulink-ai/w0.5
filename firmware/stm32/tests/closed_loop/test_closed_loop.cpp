@@ -3,6 +3,7 @@
 #include "run_lease.h"
 #include "position_control.h"
 #include "debug_trace.h"
+#include "calibration_recovery.h"
 #include <cassert>
 #include <cmath>
 
@@ -134,7 +135,7 @@ void testPolicy() {
   assert(!p.startVelocity(.2f,0,true,22));
   assert(p.startVelocity(.2f,0,true,20));
   p.tick(10000,true,false,.2f);assert(p.running());
-  p.tick(10001,true,false,-2.01f);assert(p.faulted()&&!p.running());
+  p.tick(10001,true,false,-13);assert(p.faulted()&&!p.running());
   Policy cw;cw.setCalibrated(1);cw.zero(6.27f);
   assert(cw.startPosition(.3f,.2f,0,true,6.27f));
   assert(std::fabs(cw.output(6.27f,0,1000).target-6.47f)<.0001f);
@@ -233,7 +234,7 @@ void testManualFaultReset() {
   Policy p;p.setCalibrated(1);assert(p.zero(.5f));
   assert(!p.resetOverspeed(true,0)); // Not a fault: RESET is not START.
   assert(p.startPosition(.3f,.2f,0,true,.5f));
-  p.tick(1,true,false,2.1f);
+  p.tick(1,true,false,13);
   assert(p.faulted()&&!p.running());
   assert(!p.resetOverspeed(false,0));
   for(float velocity:{NAN,INFINITY,.21f,-.21f}) {
@@ -258,16 +259,16 @@ void testOverspeedSwitch() {
   assert(!p.setOverspeedEnabled(false)); // Configuration requires a stop.
   p.stop();assert(p.setOverspeedEnabled(false)&&!p.overspeedEnabled());
   assert(!p.running()&&p.startVelocity(.2f,1,true,0));
-  p.tick(2,true,false,3);assert(!p.faulted()&&p.running());
-  p.tick(3,false,false,3);assert(p.faulted()&&!p.running());
+  p.tick(2,true,false,13);assert(!p.faulted()&&p.running());
+  p.tick(3,false,false,13);assert(p.faulted()&&!p.running());
   assert(!p.setOverspeedEnabled(true)); // Does not bypass other fault latches.
   Policy q;q.setCalibrated(1);q.zero(0);
-  assert(q.startVelocity(.2f,0,true,0));q.tick(1,true,false,3);
+  assert(q.startVelocity(.2f,0,true,0));q.tick(1,true,false,13);
   assert(q.faulted()&&q.setOverspeedEnabled(false));
   assert(q.faulted()&&!q.running()); // Switching does not acknowledge the fault.
   assert(q.resetOverspeed(true,0));
   assert(q.setOverspeedEnabled(true));
-  assert(q.startVelocity(.2f,2,true,0));q.tick(3,true,false,3);
+  assert(q.startVelocity(.2f,2,true,0));q.tick(3,true,false,13);
   assert(q.faulted());
   Policy limits;limits.setCalibrated(1);limits.zero(0);
   assert(limits.setOverspeedEnabled(false)&&limits.startVelocity(.2f,0,true,0));
@@ -277,7 +278,93 @@ void testOverspeedSwitch() {
   hardware.tick(1,true,true,0);assert(hardware.faulted()&&!hardware.running());
   Policy reboot;assert(reboot.overspeedEnabled()); // No persistent bypass.
 }
+void testRelaxedOverspeed() {
+  auto rpm=[](float value){return tuning::rpmToRadiansPerSecond(value);};
+  auto running=[](){Policy p;p.setCalibrated(1);assert(p.zero(0));
+    assert(p.startVelocity(.2f,0,true,0));return p;};
+  Policy normal=running();
+  normal.tick(0,true,false,rpm(50));normal.tick(1000,true,false,rpm(-60));
+  assert(normal.running()&&!normal.faulted());
+  for(float sign:{-1.f,1.f}) {
+    Policy timed=running();timed.tick(0,true,false,rpm(sign*90));
+    timed.tick(99,true,false,rpm(sign*90));assert(timed.running());
+    timed.tick(100,true,false,rpm(sign*90));
+    assert(timed.faulted()&&timed.feedbackFault()==FeedbackFault::Overspeed);
+    Policy hard=running();hard.tick(0,true,false,rpm(sign*121));
+    assert(hard.faulted()&&!hard.running());
+  }
+  Policy boundary=running();boundary.tick(0,true,false,rpm(120));
+  assert(boundary.running());boundary.tick(100,true,false,rpm(120));assert(boundary.faulted());
+  Policy spikes=running();spikes.tick(0,true,false,rpm(90));
+  spikes.tick(99,true,false,rpm(60)); // Recovering to the boundary clears the window.
+  spikes.tick(100,true,false,rpm(-90));spikes.tick(199,true,false,rpm(-90));
+  assert(spikes.running());spikes.tick(200,true,false,rpm(-90));assert(spikes.faulted());
+  Policy restart=running();restart.tick(0,true,false,rpm(90));restart.stop();
+  assert(restart.startVelocity(.2f,1000,true,0));
+  restart.tick(1000,true,false,rpm(90));assert(restart.running());
+  restart.tick(1099,true,false,rpm(90));assert(restart.running());
+  restart.tick(1100,true,false,rpm(90));assert(restart.faulted());
+  Policy wrap=running();wrap.tick(UINT32_MAX-50,true,false,rpm(90));
+  wrap.tick(48,true,false,rpm(90));assert(wrap.running());
+  wrap.tick(49,true,false,rpm(90));assert(wrap.faulted());
+  Policy first=running(),second=running();first.tick(0,true,false,rpm(90));
+  second.tick(50,true,false,rpm(90));first.tick(100,true,false,rpm(90));
+  second.tick(100,true,false,rpm(90));assert(first.faulted()&&second.running());
+  for(bool hardware:{false,true}) {
+    Policy immediate=running();immediate.tick(0,true,false,rpm(90));
+    immediate.tick(1,!hardware?false:true,hardware,rpm(90));
+    assert(immediate.faulted()&&immediate.feedbackFault()==
+        (hardware?FeedbackFault::Hardware:FeedbackFault::SensorInvalid));
+  }
+}
+void testCalibrationRecovery() {
+  CalibrationReadiness state{"ALIGNMENT_FAILED",false,false,true,true,0};
+  for(const char* fault:{"NONE","ALIGNMENT_FAILED","FOC_INIT_FAILED","OVERSPEED",
+      "SOFT_LIMIT","SENSOR_INVALID","HARDWARE_OR_FEEDBACK","ENABLE_FAILED"}) {
+    state.fault=fault;assert(canRecalibrate(state));
+  }
+  for(const char* fault:{"INIT_FAILED","WATCHDOG_INIT_FAILED","UNKNOWN"}) {
+    state.fault=fault;assert(!canRecalibrate(state));
+  }
+  state.fault=nullptr;assert(!canRecalibrate(state));
+  state.fault="ALIGNMENT_FAILED";
+  state.active=true;assert(!canRecalibrate(state));state.active=false;
+  state.enabled=true;assert(!canRecalibrate(state));state.enabled=false;
+  state.sensor_valid=false;assert(!canRecalibrate(state));state.sensor_valid=true;
+  state.hardware_ready=false;assert(!canRecalibrate(state));state.hardware_ready=true;
+  for(float speed:{.21f,-.21f,NAN,INFINITY}){state.velocity=speed;assert(!canRecalibrate(state));}
+  state.velocity=.2f;assert(canRecalibrate(state));
+  Policy one,two;
+  one.setCalibrated(1);assert(one.zero(0));
+  two.setCalibrated(-1);assert(two.zero(2));
+  assert(one.startVelocity(.2f,0,true,0));
+  assert(!one.resetForCalibration());
+  one.tick(1,true,true,0);assert(one.faulted());
+  assert(one.resetForCalibration());
+  assert(!one.faulted()&&!one.calibrated()&&!one.running());
+  assert(one.feedbackFault()==FeedbackFault::None);
+  assert(!one.startPosition(0,.2f,2,true,0)); // Recalibration cannot resume motion.
+  assert(two.calibrated()&&two.zeroRaw()==2&&!two.faulted());
+}
+void testMotorTuningIsolation() {
+  const auto primary=tuning::controllerFor(1);
+  const auto secondary=tuning::controllerFor(2);
+  // Tuning the second axis must preserve the accepted first-axis response.
+  assert(primary.voltage_ramp==10.0f);
+  assert(secondary.voltage_ramp==100.0f);
+  assert(primary.velocity_p==0.20f);
+  assert(secondary.velocity_p==0.10f);
+  assert(primary.velocity_i==secondary.velocity_i);
+  assert(primary.velocity_d==secondary.velocity_d);
+  assert(primary.velocity_filter_seconds==secondary.velocity_filter_seconds);
+  assert(primary.angle_p==secondary.angle_p);
+  assert(tuning::controllerFor(1).voltage_ramp==primary.voltage_ramp);
+}
+
 int main() {
+  testMotorTuningIsolation();
+  testCalibrationRecovery();
+  testRelaxedOverspeed();
   DebugTrace dualTrace;
   assert(dualTrace.due(0,true,100));
   assert(!dualTrace.due(50,true,100));

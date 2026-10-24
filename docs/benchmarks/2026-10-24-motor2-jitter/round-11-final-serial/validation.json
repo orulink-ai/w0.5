@@ -1,0 +1,31 @@
+{
+  "folder": "round-11-final-serial",
+  "source": "UART TRACE",
+  "settled_samples": 70,
+  "target_deg": 11.5,
+  "mean_deg": 11.533714285714286,
+  "mean_error_deg": 0.03371428571428581,
+  "std_deg": 0.017832668943056608,
+  "peak_to_peak_deg": 0.07399999999999984,
+  "minimum_deg": 11.492,
+  "maximum_deg": 11.566,
+  "faults": [
+    "NONE"
+  ],
+  "primary_unchanged": true,
+  "accepted": true,
+  "after_two_seconds": {
+    "n": 60,
+    "mean_deg": 11.532733333333333,
+    "mean_error_deg": 0.03273333333333284,
+    "peak_to_peak_deg": 0.07399999999999984,
+    "std_deg": 0.01833927176550072,
+    "accepted": true
+  },
+  "drag_error_deg": {
+    "rms": 1.525825022733603,
+    "max_absolute": 2.851000000000001,
+    "n": 52
+  },
+  "last_outside_half_degree_ms_after_final_input": 352
+}

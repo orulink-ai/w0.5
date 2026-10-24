@@ -1,0 +1,16 @@
+{
+  "original_bin_sha256": "fb5c20609875cc104506ae89c738f07598e604083104802d407fca839f7d0ade",
+  "debug_bin_sha256": "b75247771892d6b6b1b8cd2c61c454fdae8f2b928fcb4f5b78b4b09c719c7884",
+  "identical_machine_code": false,
+  "debug_build_flags": "-Wall -Wextra -DCLOSED_LOOP_CONTROL -DHAL_IWDG_MODULE_ENABLED -DFOC_DEBUG_TRACE -DSERIAL_TX_BUFFER_SIZE=256 -DDUAL_MOTOR_CONTROL -DSERIAL_RX_BUFFER_SIZE=256 -g3",
+  "debug_firmware_flashed": false,
+  "cpu_halted": false,
+  "ram_layout_validation": {
+    "secondary_address": "0x20000a28",
+    "secondary_size": "0x3e4",
+    "old_and_debug_symbol_match": true,
+    "method": "Same source and ABI; offline DWARF member offsets only; live constants validated. Executable code differs: no source breakpoints or PC analysis used."
+  },
+  "build_outputs_restored": true,
+  "restored_bin_sha256": "fb5c20609875cc104506ae89c738f07598e604083104802d407fca839f7d0ade"
+}

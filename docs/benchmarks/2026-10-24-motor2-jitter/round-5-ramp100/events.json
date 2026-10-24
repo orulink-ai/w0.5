@@ -1,0 +1,317 @@
+[
+  {
+    "host_ms": 1792853706378,
+    "event": "capture_ready",
+    "initial": 11.5
+  },
+  {
+    "host_ms": 1792853707445,
+    "event": "enabled",
+    "run_id": 151883013
+  },
+  {
+    "host_ms": 1792853707446,
+    "event": "target",
+    "target": 11.5
+  },
+  {
+    "host_ms": 1792853708644,
+    "event": "target",
+    "target": 12.0
+  },
+  {
+    "host_ms": 1792853708719,
+    "event": "target",
+    "target": 12.5
+  },
+  {
+    "host_ms": 1792853708774,
+    "event": "target",
+    "target": 13.0
+  },
+  {
+    "host_ms": 1792853708856,
+    "event": "target",
+    "target": 13.5
+  },
+  {
+    "host_ms": 1792853708910,
+    "event": "target",
+    "target": 14.0
+  },
+  {
+    "host_ms": 1792853708967,
+    "event": "target",
+    "target": 14.5
+  },
+  {
+    "host_ms": 1792853709042,
+    "event": "target",
+    "target": 15.0
+  },
+  {
+    "host_ms": 1792853709134,
+    "event": "target",
+    "target": 15.5
+  },
+  {
+    "host_ms": 1792853709168,
+    "event": "target",
+    "target": 16.0
+  },
+  {
+    "host_ms": 1792853709237,
+    "event": "target",
+    "target": 16.5
+  },
+  {
+    "host_ms": 1792853709962,
+    "event": "target",
+    "target": 17.0
+  },
+  {
+    "host_ms": 1792853710015,
+    "event": "target",
+    "target": 17.5
+  },
+  {
+    "host_ms": 1792853710093,
+    "event": "target",
+    "target": 18.0
+  },
+  {
+    "host_ms": 1792853710149,
+    "event": "target",
+    "target": 18.5
+  },
+  {
+    "host_ms": 1792853710227,
+    "event": "target",
+    "target": 19.0
+  },
+  {
+    "host_ms": 1792853710308,
+    "event": "target",
+    "target": 19.5
+  },
+  {
+    "host_ms": 1792853710409,
+    "event": "target",
+    "target": 20.0
+  },
+  {
+    "host_ms": 1792853710479,
+    "event": "target",
+    "target": 20.5
+  },
+  {
+    "host_ms": 1792853710527,
+    "event": "target",
+    "target": 21.0
+  },
+  {
+    "host_ms": 1792853710604,
+    "event": "target",
+    "target": 21.5
+  },
+  {
+    "host_ms": 1792853711591,
+    "event": "target",
+    "target": 21.0
+  },
+  {
+    "host_ms": 1792853711889,
+    "event": "target",
+    "target": 20.5
+  },
+  {
+    "host_ms": 1792853712161,
+    "event": "target",
+    "target": 19.5
+  },
+  {
+    "host_ms": 1792853712197,
+    "event": "target",
+    "target": 18.5
+  },
+  {
+    "host_ms": 1792853712221,
+    "event": "target",
+    "target": 18.0
+  },
+  {
+    "host_ms": 1792853712350,
+    "event": "target",
+    "target": 17.5
+  },
+  {
+    "host_ms": 1792853712404,
+    "event": "target",
+    "target": 17.0
+  },
+  {
+    "host_ms": 1792853712434,
+    "event": "target",
+    "target": 16.5
+  },
+  {
+    "host_ms": 1792853713130,
+    "event": "target",
+    "target": 16.0
+  },
+  {
+    "host_ms": 1792853713214,
+    "event": "target",
+    "target": 15.5
+  },
+  {
+    "host_ms": 1792853713286,
+    "event": "target",
+    "target": 15.0
+  },
+  {
+    "host_ms": 1792853713339,
+    "event": "target",
+    "target": 14.5
+  },
+  {
+    "host_ms": 1792853713372,
+    "event": "target",
+    "target": 14.0
+  },
+  {
+    "host_ms": 1792853713460,
+    "event": "target",
+    "target": 13.5
+  },
+  {
+    "host_ms": 1792853713522,
+    "event": "target",
+    "target": 13.0
+  },
+  {
+    "host_ms": 1792853713593,
+    "event": "target",
+    "target": 12.5
+  },
+  {
+    "host_ms": 1792853713674,
+    "event": "target",
+    "target": 12.0
+  },
+  {
+    "host_ms": 1792853713910,
+    "event": "target",
+    "target": 11.5
+  },
+  {
+    "host_ms": 1792853714510,
+    "event": "target",
+    "target": 11.0
+  },
+  {
+    "host_ms": 1792853714583,
+    "event": "target",
+    "target": 10.5
+  },
+  {
+    "host_ms": 1792853714639,
+    "event": "target",
+    "target": 10.0
+  },
+  {
+    "host_ms": 1792853714721,
+    "event": "target",
+    "target": 9.5
+  },
+  {
+    "host_ms": 1792853714774,
+    "event": "target",
+    "target": 9.0
+  },
+  {
+    "host_ms": 1792853714829,
+    "event": "target",
+    "target": 8.5
+  },
+  {
+    "host_ms": 1792853714880,
+    "event": "target",
+    "target": 8.0
+  },
+  {
+    "host_ms": 1792853714972,
+    "event": "target",
+    "target": 7.5
+  },
+  {
+    "host_ms": 1792853715030,
+    "event": "target",
+    "target": 7.0
+  },
+  {
+    "host_ms": 1792853715101,
+    "event": "target",
+    "target": 6.5
+  },
+  {
+    "host_ms": 1792853715815,
+    "event": "target",
+    "target": 7.0
+  },
+  {
+    "host_ms": 1792853715896,
+    "event": "target",
+    "target": 7.5
+  },
+  {
+    "host_ms": 1792853715945,
+    "event": "target",
+    "target": 8.0
+  },
+  {
+    "host_ms": 1792853715994,
+    "event": "target",
+    "target": 8.5
+  },
+  {
+    "host_ms": 1792853716043,
+    "event": "target",
+    "target": 9.0
+  },
+  {
+    "host_ms": 1792853716104,
+    "event": "target",
+    "target": 9.5
+  },
+  {
+    "host_ms": 1792853716160,
+    "event": "target",
+    "target": 10.0
+  },
+  {
+    "host_ms": 1792853716220,
+    "event": "target",
+    "target": 10.5
+  },
+  {
+    "host_ms": 1792853716297,
+    "event": "target",
+    "target": 11.0
+  },
+  {
+    "host_ms": 1792853716333,
+    "event": "target",
+    "target": 11.5
+  },
+  {
+    "host_ms": 1792853720068,
+    "event": "disabled",
+    "fault": "NONE",
+    "reason": "USER_STOP"
+  },
+  {
+    "host_ms": 1792853720075,
+    "event": "final_stop"
+  }
+]

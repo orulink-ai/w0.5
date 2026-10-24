@@ -1,0 +1,345 @@
+{
+  "connected": true,
+  "port": "/dev/cu.wchusbserial1110",
+  "baud": 115200,
+  "signal": "valid",
+  "reading": {
+    "valid": true,
+    "angle_deg": 225.78,
+    "velocity_rad_s": 0.011,
+    "frequency_hz": 459.4,
+    "high_us": 1349,
+    "period_us": 2176
+  },
+  "error": "",
+  "age_ms": 21,
+  "samples": 29224,
+  "valid_samples": 29224,
+  "logs": [
+    {
+      "time_ms": 1792853955106,
+      "text": "#FOC_STATUS,4,READY,STOP,91933524,1,0,1,-8.397,-7.000,-0.290,234.065,-90.000,90.000,NONE,0,0,USER_STOP,0"
+    },
+    {
+      "time_ms": 1792853955107,
+      "text": "OK,225.77,-0.030,459.4,1349,2176"
+    },
+    {
+      "time_ms": 1792853955119,
+      "text": "#ENCODER_AUX,1,2,OK,119.07,-0.005,458.0,744,2183"
+    },
+    {
+      "time_ms": 1792853955128,
+      "text": "#FOC2_STATUS,4,READY,STOP,151883201,1,0,1,11.814,12.000,0.043,130.881,-90.000,90.000,NONE,0,0,USER_STOP,1"
+    },
+    {
+      "time_ms": 1792853955206,
+      "text": "OK,225.77,0.025,459.3,1349,2177"
+    },
+    {
+      "time_ms": 1792853955218,
+      "text": "#ENCODER_AUX,1,2,OK,119.02,-0.001,458.0,743,2183"
+    },
+    {
+      "time_ms": 1792853955306,
+      "text": "#FOC_STATUS,4,READY,STOP,91933524,1,0,1,-8.257,-7.000,-0.010,234.065,-90.000,90.000,NONE,0,0,USER_STOP,0"
+    },
+    {
+      "time_ms": 1792853955307,
+      "text": "OK,225.69,-0.031,459.3,1348,2177"
+    },
+    {
+      "time_ms": 1792853955319,
+      "text": "#ENCODER_AUX,1,2,OK,119.07,-0.008,458.0,744,2183"
+    },
+    {
+      "time_ms": 1792853955328,
+      "text": "#FOC2_STATUS,4,READY,STOP,151883201,1,0,1,11.814,12.000,0.075,130.881,-90.000,90.000,NONE,0,0,USER_STOP,1"
+    },
+    {
+      "time_ms": 1792853955406,
+      "text": "OK,225.69,-0.026,459.3,1348,2177"
+    },
+    {
+      "time_ms": 1792853955418,
+      "text": "#ENCODER_AUX,1,2,OK,119.07,0.006,458.0,744,2183"
+    },
+    {
+      "time_ms": 1792853955506,
+      "text": "#FOC_STATUS,4,READY,STOP,91933524,1,0,1,-8.279,-7.000,0.214,234.065,-90.000,90.000,NONE,0,0,USER_STOP,0"
+    },
+    {
+      "time_ms": 1792853955507,
+      "text": "OK,225.80,0.008,459.4,1349,2176"
+    },
+    {
+      "time_ms": 1792853955519,
+      "text": "#ENCODER_AUX,1,2,OK,119.05,-0.011,458.0,744,2183"
+    },
+    {
+      "time_ms": 1792853955528,
+      "text": "#FOC2_STATUS,4,READY,STOP,151883201,1,0,1,11.829,12.000,0.100,130.881,-90.000,90.000,NONE,0,0,USER_STOP,1"
+    },
+    {
+      "time_ms": 1792853955606,
+      "text": "OK,225.79,-0.009,459.3,1349,2177"
+    },
+    {
+      "time_ms": 1792853955618,
+      "text": "#ENCODER_AUX,1,2,OK,119.08,-0.006,458.1,744,2183"
+    },
+    {
+      "time_ms": 1792853955706,
+      "text": "#FOC_STATUS,4,READY,STOP,91933524,1,0,1,-8.266,-7.000,0.116,234.065,-90.000,90.000,NONE,0,0,USER_STOP,0"
+    },
+    {
+      "time_ms": 1792853955707,
+      "text": "OK,225.79,0.012,459.3,1349,2177"
+    },
+    {
+      "time_ms": 1792853955719,
+      "text": "#ENCODER_AUX,1,2,OK,119.05,0.000,458.0,744,2183"
+    },
+    {
+      "time_ms": 1792853955727,
+      "text": "#FOC2_STATUS,4,READY,STOP,151883201,1,0,1,11.829,12.000,-0.002,130.881,-90.000,90.000,NONE,0,0,USER_STOP,1"
+    },
+    {
+      "time_ms": 1792853955806,
+      "text": "OK,225.81,0.002,459.3,1349,2177"
+    },
+    {
+      "time_ms": 1792853955818,
+      "text": "#ENCODER_AUX,1,2,OK,119.07,0.029,458.0,744,2183"
+    },
+    {
+      "time_ms": 1792853955906,
+      "text": "#FOC_STATUS,4,READY,STOP,91933524,1,0,1,-8.296,-7.000,0.071,234.065,-90.000,90.000,NONE,0,0,USER_STOP,0"
+    },
+    {
+      "time_ms": 1792853955907,
+      "text": "OK,225.80,0.007,459.4,1349,2176"
+    },
+    {
+      "time_ms": 1792853955919,
+      "text": "#ENCODER_AUX,1,2,OK,119.15,-0.022,458.0,744,2183"
+    },
+    {
+      "time_ms": 1792853955928,
+      "text": "#FOC2_STATUS,4,READY,STOP,151883201,1,0,1,11.727,12.000,0.208,130.881,-90.000,90.000,NONE,0,0,USER_STOP,1"
+    },
+    {
+      "time_ms": 1792853956006,
+      "text": "OK,225.78,0.011,459.4,1349,2176"
+    },
+    {
+      "time_ms": 1792853956018,
+      "text": "#ENCODER_AUX,1,2,OK,119.08,0.005,458.1,744,2183"
+    }
+  ],
+  "control": {
+    "available": false,
+    "mode": "target_staging",
+    "motor_enabled": false,
+    "target_deg": null,
+    "age_ms": null,
+    "command": {
+      "status": "idle",
+      "id": null,
+      "angle_deg": null,
+      "error": ""
+    }
+  },
+  "jog": null,
+  "enable": {
+    "available": false,
+    "ready": false,
+    "off_available": false,
+    "state": null,
+    "enabled": null,
+    "max_on_ms": 5000,
+    "age_ms": null,
+    "last_id": null,
+    "command": {
+      "status": "idle",
+      "id": null,
+      "enabled": null,
+      "error": ""
+    }
+  },
+  "motor": {
+    "available": false,
+    "ready": false,
+    "stop_available": false,
+    "state": null,
+    "last_id": null,
+    "age_ms": null,
+    "max_run_ms": 3000,
+    "command": {
+      "status": "idle",
+      "id": null,
+      "action": null,
+      "error": ""
+    }
+  },
+  "closed_loop": {
+    "protocol_version": 4,
+    "overspeed_enabled": false,
+    "run_id": 0,
+    "lease_remaining_ms": 0,
+    "stop_reason": "USER_STOP",
+    "state": "READY",
+    "mode": "STOP",
+    "last_id": 91933524,
+    "calibrated": true,
+    "enabled": false,
+    "sensor_valid": true,
+    "relative_deg": -8.296,
+    "target_deg": -7.0,
+    "velocity_rpm": 0.071,
+    "zero_raw_deg": 234.065,
+    "soft_min_deg": -90.0,
+    "soft_max_deg": 90.0,
+    "fault": "NONE",
+    "supported": true,
+    "available": true,
+    "age_ms": 121,
+    "max_run_ms": null,
+    "lease_timeout_ms": 1500,
+    "owned_run_id": null,
+    "settling": false,
+    "command": {
+      "status": "accepted",
+      "id": 91933524,
+      "action": "stop",
+      "error": ""
+    }
+  },
+  "motors": [
+    {
+      "id": 1,
+      "signal": "valid",
+      "reading": {
+        "valid": true,
+        "angle_deg": 225.78,
+        "velocity_rad_s": 0.011,
+        "frequency_hz": 459.4,
+        "high_us": 1349,
+        "period_us": 2176
+      },
+      "closed_loop": {
+        "protocol_version": 4,
+        "overspeed_enabled": false,
+        "run_id": 0,
+        "lease_remaining_ms": 0,
+        "stop_reason": "USER_STOP",
+        "state": "READY",
+        "mode": "STOP",
+        "last_id": 91933524,
+        "calibrated": true,
+        "enabled": false,
+        "sensor_valid": true,
+        "relative_deg": -8.296,
+        "target_deg": -7.0,
+        "velocity_rpm": 0.071,
+        "zero_raw_deg": 234.065,
+        "soft_min_deg": -90.0,
+        "soft_max_deg": 90.0,
+        "fault": "NONE",
+        "supported": true,
+        "available": true,
+        "age_ms": 121,
+        "max_run_ms": null,
+        "lease_timeout_ms": 1500,
+        "owned_run_id": null,
+        "settling": false,
+        "command": {
+          "status": "accepted",
+          "id": 91933524,
+          "action": "stop",
+          "error": ""
+        }
+      }
+    },
+    {
+      "id": 2,
+      "signal": "valid",
+      "reading": {
+        "valid": true,
+        "angle_deg": 119.08,
+        "velocity_rad_s": 0.005,
+        "frequency_hz": 458.1,
+        "high_us": 744,
+        "period_us": 2183
+      },
+      "closed_loop": {
+        "protocol_version": 4,
+        "overspeed_enabled": true,
+        "run_id": 0,
+        "lease_remaining_ms": 0,
+        "stop_reason": "USER_STOP",
+        "state": "READY",
+        "mode": "STOP",
+        "last_id": 151883201,
+        "calibrated": true,
+        "enabled": false,
+        "sensor_valid": true,
+        "relative_deg": 11.727,
+        "target_deg": 12.0,
+        "velocity_rpm": 0.208,
+        "zero_raw_deg": 130.881,
+        "soft_min_deg": -90.0,
+        "soft_max_deg": 90.0,
+        "fault": "NONE",
+        "supported": true,
+        "available": true,
+        "age_ms": 99,
+        "max_run_ms": null,
+        "lease_timeout_ms": 1500,
+        "owned_run_id": null,
+        "settling": false,
+        "command": {
+          "status": "accepted",
+          "id": 151883201,
+          "action": "stop",
+          "error": ""
+        }
+      }
+    }
+  ],
+  "encoders": [
+    {
+      "id": 1,
+      "pin": "PA0",
+      "signal": "valid",
+      "reading": {
+        "valid": true,
+        "angle_deg": 225.78,
+        "velocity_rad_s": 0.011,
+        "frequency_hz": 459.4,
+        "high_us": 1349,
+        "period_us": 2176
+      },
+      "age_ms": 21,
+      "samples": 29224,
+      "valid_samples": 29224
+    },
+    {
+      "id": 2,
+      "pin": "PB7",
+      "signal": "valid",
+      "reading": {
+        "valid": true,
+        "angle_deg": 119.08,
+        "velocity_rad_s": 0.005,
+        "frequency_hz": 458.1,
+        "high_us": 744,
+        "period_us": 2183
+      },
+      "age_ms": 8,
+      "samples": 29225,
+      "valid_samples": 29225
+    }
+  ],
+  "encoder_mode": "dual_control"
+}

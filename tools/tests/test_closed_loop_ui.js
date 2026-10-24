@@ -6,6 +6,14 @@ const state = (patch = {}, outer = {}) => ({connected:true, signal:"valid", clos
 assert.equal(viewModel(state()).ready, true);
 assert.equal(viewModel(state({state:"UNCALIBRATED"})).calibrate, true);
 assert.equal(viewModel(state({state:"UNCALIBRATED"})).ready, false);
+assert.equal(viewModel(state()).calibrate,true,'Stopped calibrated motor may recalibrate');
+for(const fault of ['ALIGNMENT_FAILED','FOC_INIT_FAILED','OVERSPEED','SENSOR_INVALID','HARDWARE_OR_FEEDBACK','SOFT_LIMIT','ENABLE_FAILED']) {
+  assert.equal(viewModel(state({state:'FAULT',fault})).calibrate,true);
+}
+for(const patch of [{state:'FAULT',fault:'INIT_FAILED'},{state:'FAULT',fault:'WATCHDOG_INIT_FAILED'},
+  {state:'FAULT',fault:'ALIGNMENT_FAILED',enabled:true},{state:'FAULT',fault:'ALIGNMENT_FAILED',sensor_valid:false}]) {
+  assert.equal(viewModel(state(patch)).calibrate,false);
+}
 for (const phase of ["CALIBRATING", "RUNNING", "FAULT"]) {
   assert.equal(viewModel(state({state:phase})).ready, false);
   assert.equal(viewModel(state({state:phase})).calibrate, false);

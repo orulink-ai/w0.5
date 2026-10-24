@@ -1,0 +1,212 @@
+[
+  {
+    "host_ms": 1792854347970,
+    "type": "pointerdown",
+    "value": 11.5
+  },
+  {
+    "host_ms": 1792854347981,
+    "type": "input",
+    "value": 11
+  },
+  {
+    "host_ms": 1792854348047,
+    "type": "input",
+    "value": 10.5
+  },
+  {
+    "host_ms": 1792854348114,
+    "type": "input",
+    "value": 10
+  },
+  {
+    "host_ms": 1792854348180,
+    "type": "input",
+    "value": 9.5
+  },
+  {
+    "host_ms": 1792854348247,
+    "type": "input",
+    "value": 9
+  },
+  {
+    "host_ms": 1792854348314,
+    "type": "input",
+    "value": 8.5
+  },
+  {
+    "host_ms": 1792854348380,
+    "type": "input",
+    "value": 8
+  },
+  {
+    "host_ms": 1792854348447,
+    "type": "input",
+    "value": 7.5
+  },
+  {
+    "host_ms": 1792854348513,
+    "type": "input",
+    "value": 7
+  },
+  {
+    "host_ms": 1792854348563,
+    "type": "input",
+    "value": 6.5
+  },
+  {
+    "host_ms": 1792854349280,
+    "type": "input",
+    "value": 6
+  },
+  {
+    "host_ms": 1792854349330,
+    "type": "input",
+    "value": 5.5
+  },
+  {
+    "host_ms": 1792854349380,
+    "type": "input",
+    "value": 5
+  },
+  {
+    "host_ms": 1792854349447,
+    "type": "input",
+    "value": 4.5
+  },
+  {
+    "host_ms": 1792854349514,
+    "type": "input",
+    "value": 4
+  },
+  {
+    "host_ms": 1792854349582,
+    "type": "input",
+    "value": 3.5
+  },
+  {
+    "host_ms": 1792854349664,
+    "type": "input",
+    "value": 3
+  },
+  {
+    "host_ms": 1792854349730,
+    "type": "input",
+    "value": 2.5
+  },
+  {
+    "host_ms": 1792854349830,
+    "type": "input",
+    "value": 2
+  },
+  {
+    "host_ms": 1792854349897,
+    "type": "input",
+    "value": 1.5
+  },
+  {
+    "host_ms": 1792854350614,
+    "type": "input",
+    "value": 2
+  },
+  {
+    "host_ms": 1792854350680,
+    "type": "input",
+    "value": 2.5
+  },
+  {
+    "host_ms": 1792854350730,
+    "type": "input",
+    "value": 3
+  },
+  {
+    "host_ms": 1792854350797,
+    "type": "input",
+    "value": 3.5
+  },
+  {
+    "host_ms": 1792854350864,
+    "type": "input",
+    "value": 4
+  },
+  {
+    "host_ms": 1792854350931,
+    "type": "input",
+    "value": 4.5
+  },
+  {
+    "host_ms": 1792854350979,
+    "type": "input",
+    "value": 5
+  },
+  {
+    "host_ms": 1792854351047,
+    "type": "input",
+    "value": 5.5
+  },
+  {
+    "host_ms": 1792854351096,
+    "type": "input",
+    "value": 6
+  },
+  {
+    "host_ms": 1792854351163,
+    "type": "input",
+    "value": 6.5
+  },
+  {
+    "host_ms": 1792854351881,
+    "type": "input",
+    "value": 7
+  },
+  {
+    "host_ms": 1792854351947,
+    "type": "input",
+    "value": 7.5
+  },
+  {
+    "host_ms": 1792854352013,
+    "type": "input",
+    "value": 8
+  },
+  {
+    "host_ms": 1792854352064,
+    "type": "input",
+    "value": 8.5
+  },
+  {
+    "host_ms": 1792854352130,
+    "type": "input",
+    "value": 9
+  },
+  {
+    "host_ms": 1792854352197,
+    "type": "input",
+    "value": 9.5
+  },
+  {
+    "host_ms": 1792854352264,
+    "type": "input",
+    "value": 10
+  },
+  {
+    "host_ms": 1792854352331,
+    "type": "input",
+    "value": 10.5
+  },
+  {
+    "host_ms": 1792854352398,
+    "type": "input",
+    "value": 11
+  },
+  {
+    "host_ms": 1792854352463,
+    "type": "input",
+    "value": 11.5
+  },
+  {
+    "host_ms": 1792854353167,
+    "type": "pointerup",
+    "value": 11.5
+  }
+]

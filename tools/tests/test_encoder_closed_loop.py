@@ -92,6 +92,20 @@ class ChannelTests(unittest.TestCase):
         self.channel = ClosedLoopChannel(clock=lambda:self.now)
         self.channel.reset(True)
 
+    def test_recalibrate_fault_or_ready_requires_explicit_new_request(self):
+        for phase,fault in [('READY','NONE'),('FAULT','ALIGNMENT_FAILED'),('FAULT','FOC_INIT_FAILED'),
+                            ('FAULT','OVERSPEED'),('FAULT','SENSOR_INVALID'),('FAULT','SOFT_LIMIT'),
+                            ('FAULT','HARDWARE_OR_FEEDBACK'),('FAULT','ENABLE_FAILED')]:
+            c=ClosedLoopChannel();c.reset(True);c.consume(status(phase,fault=fault))
+            request,packet=c.begin({'action':'calibrate'},True)
+            self.assertEqual(packet,f'FOC,{request},CALIBRATE\n'.encode())
+            self.assertIsNone(c.snapshot()['owned_run_id'],'No lease before calibration ACK')
+            c.consume(f'#FOC_ACK,{request},CALIBRATE')
+            self.assertEqual(c.snapshot()['owned_run_id'],request)
+        for fault in ('INIT_FAILED','WATCHDOG_INIT_FAILED','UNKNOWN'):
+            c=ClosedLoopChannel();c.reset(True);c.consume(status('FAULT',fault=fault))
+            with self.assertRaises(CommandError):c.begin({'action':'calibrate'},True)
+
     def test_manual_reset_stays_stopped_and_waits_for_status(self):
         c = self.channel
         c.consume(status('FAULT', fault='OVERSPEED', reason='FAULT'))

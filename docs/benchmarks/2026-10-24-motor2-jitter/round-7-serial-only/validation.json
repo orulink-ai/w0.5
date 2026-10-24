@@ -1,0 +1,23 @@
+{
+  "folder": "round-7-serial-only",
+  "source": "UART TRACE",
+  "settled_samples": 20,
+  "target_deg": 12.0,
+  "mean_deg": 11.97345,
+  "mean_error_deg": -0.026550000000000296,
+  "std_deg": 0.0785286412718316,
+  "peak_to_peak_deg": 0.27800000000000047,
+  "minimum_deg": 11.786,
+  "maximum_deg": 12.064,
+  "faults": [
+    "NONE"
+  ],
+  "primary_unchanged": true,
+  "accepted": true,
+  "drag_error_deg": {
+    "rms": 1.1219394404815741,
+    "max_absolute": 2.4510000000000005,
+    "n": 74
+  },
+  "last_outside_half_degree_ms_after_final_input": 873
+}

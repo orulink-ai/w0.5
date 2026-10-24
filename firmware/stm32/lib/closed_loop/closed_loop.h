@@ -4,6 +4,7 @@
 #include <cstdint>
 #include "position_control.h"
 #include "closed_loop_tuning.h"
+#include "overspeed_guard.h"
 
 namespace closed_loop {
 constexpr float kTwoPi = 6.28318530718f;
@@ -64,6 +65,7 @@ class Policy {
   bool setOverspeedEnabled(bool enabled) {
     if (running_ || (fault_ && feedback_fault_ != FeedbackFault::Overspeed)) return false;
     overspeed_enabled_ = enabled;
+    overspeed_guard_.reset();
     return true;
   }
   FeedbackFault feedbackFault() const { return feedback_fault_; }
@@ -77,9 +79,9 @@ class Policy {
   float zeroRaw() const { return calibrated() ? zero_ / direction_ : 0; }
   void setCalibrated(int direction) {
     direction_ = direction == -1 || direction == 1 ? direction : 0;
-    running_ = false;
+    stop();
   }
-  void invalidate() { direction_ = 0; running_ = false; }
+  void invalidate() { direction_ = 0; stop(); }
   bool zero(float raw) {
     if (running_ || !calibrated() || !std::isfinite(raw)) return false;
     zero_ = direction_ * raw;
@@ -104,6 +106,7 @@ class Policy {
     if (!reference_.start(relative(current_raw), target, speed_rad_s, now)) return false;
     mode_ = Mode::Position; requested_ = target;
     position_speed_ = speed_rad_s;
+    overspeed_guard_.reset();
     running_ = true;
     return true;
   }
@@ -118,11 +121,11 @@ class Policy {
     if (!ready(valid, current_raw) || !std::isfinite(velocity_rad_s) ||
         std::fabs(velocity_rad_s) > tuning::kMaxSpeedRadS || std::fabs(velocity_rad_s) < tuning::kMinSpeedRadS) return false;
     mode_ = Mode::Velocity; velocity_ = velocity_rad_s;
-    requested_ = relative(current_raw); running_ = true;
+    requested_ = relative(current_raw); overspeed_guard_.reset(); running_ = true;
     return true;
   }
-  void stop() { running_ = false; }
-  void fail() { running_ = false; fault_ = true; }
+  void stop() { running_ = false; overspeed_guard_.reset(); }
+  void fail() { stop(); fault_ = true; }
   // A manual acknowledgement clears only the overspeed latch. Calibration and
   // origin survive, but the previous move never resumes without a new START.
   bool resetOverspeed(bool sensor_valid, float raw_velocity) {
@@ -132,12 +135,21 @@ class Policy {
     feedback_fault_ = FeedbackFault::None;
     return true;
   }
-  void tick(uint32_t, bool sensor_valid, bool hardware_fault, float raw_velocity=0) {
+  // Only the application's explicit CALIBRATE path may call this, after live
+  // hardware checks. Clearing the latch invalidates old calibration and never
+  // starts a position/velocity move or resumes an earlier target.
+  bool resetForCalibration() {
+    if(running_)return false;
+    stop();fault_=false;feedback_fault_=FeedbackFault::None;
+    direction_=0;zero_ready_=false;
+    return true;
+  }
+  void tick(uint32_t now, bool sensor_valid, bool hardware_fault, float raw_velocity=0) {
     if (hardware_fault) { feedback_fault_=FeedbackFault::Hardware; fail(); }
     if (running_ && (!sensor_valid || !std::isfinite(raw_velocity))) {
       feedback_fault_=FeedbackFault::SensorInvalid; fail();
     }
-    if (running_ && overspeed_enabled_ && std::fabs(raw_velocity)>2) {
+    if (overspeed_guard_.update(now,raw_velocity,running_&&overspeed_enabled_)) {
       feedback_fault_=FeedbackFault::Overspeed; fail();
     }
   }
@@ -166,6 +178,7 @@ class Policy {
     return !running_ && !fault_ && calibrated() && zero_ready_ && valid && insideLimits(current_raw);
   }
   RateLimitedReference reference_;
+  OverspeedGuard overspeed_guard_;
   FeedbackFault feedback_fault_=FeedbackFault::None;
   int direction_=0;
   bool running_=false, fault_=false, zero_ready_=false;

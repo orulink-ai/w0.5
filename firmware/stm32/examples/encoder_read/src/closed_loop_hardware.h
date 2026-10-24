@@ -62,6 +62,8 @@ class MotorHardware {
   bool begin();
   void poll();
   bool enable();
+  bool calibrationReady() const;
+  bool recoverForCalibration();
   void stop();
   bool enabled()const{return enabled_;}
   bool pinHighReadback()const{return pinHigh();}

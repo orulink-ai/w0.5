@@ -1,0 +1,31 @@
+{
+  "folder": "round-9-p010",
+  "source": "SWD PWM tracker",
+  "settled_samples": 1218,
+  "target_deg": 12.0,
+  "mean_deg": 11.958493470092298,
+  "mean_error_deg": -0.04150652990770176,
+  "std_deg": 0.04812762407788888,
+  "peak_to_peak_deg": 0.3351847033292046,
+  "minimum_deg": 11.760141995171622,
+  "maximum_deg": 12.095326698500827,
+  "faults": [
+    "NONE"
+  ],
+  "primary_unchanged": true,
+  "accepted": true,
+  "after_two_seconds": {
+    "n": 1096,
+    "mean_deg": 11.970433075010979,
+    "mean_error_deg": -0.02956692498902136,
+    "peak_to_peak_deg": 0.2615689244548065,
+    "std_deg": 0.030083726318911583,
+    "accepted": true
+  },
+  "drag_error_deg": {
+    "rms": 1.7367274109517985,
+    "max_absolute": 3.7009415809883563,
+    "n": 1443
+  },
+  "last_outside_half_degree_ms_after_final_input": 741.0
+}

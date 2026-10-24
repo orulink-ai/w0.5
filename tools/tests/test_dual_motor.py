@@ -87,6 +87,15 @@ class DualMotorTests(unittest.TestCase):
         with self.assertRaises(CommandError):reader.send_foc_heartbeat({'run_id':run},motor_id=1)
         self.assertEqual(len(packets),1)
 
+    def test_recalibrating_second_fault_preserves_first_calibration(self):
+        before=self.store.foc_channel(1).snapshot()
+        self.store.consume(status(2,phase='FAULT').replace(',NONE,',',ALIGNMENT_FAILED,',1))
+        channel=self.store.foc_channel(2)
+        run,_=channel.begin({'action':'calibrate'},True)
+        self.store.consume(f'#FOC2_ACK,{run},CALIBRATE')
+        self.assertEqual(channel.snapshot()['owned_run_id'],run)
+        self.assertEqual(self.store.foc_channel(1).snapshot(),before)
+
 
 class DualMotorHTTPTests(unittest.TestCase):
     def test_second_endpoint_requires_second_ack_even_with_same_request_id(self):
